@@ -10,7 +10,7 @@ Both the **Unity (VR headset)** client and **Flutter (Companion Mobile App)** cl
 ## Architecture Overview
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','primaryColor':'#EDE9FE','primaryTextColor':'#1E1B4B','primaryBorderColor':'#7C3AED','lineColor':'#7C3AED','clusterBkg':'#FAF8FF','clusterBorder':'#C4B5FD'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#1E2235','primaryTextColor':'#E2E8F0','primaryBorderColor':'#A78BFA','secondaryColor':'#161929','tertiaryColor':'#14172A','mainBkg':'#1E2235','nodeBorder':'#A78BFA','nodeTextColor':'#E2E8F0','lineColor':'#A78BFA','textColor':'#E2E8F0','titleColor':'#DDD6FE','clusterBkg':'#14172A','clusterBorder':'#4C1D95','edgeLabelBackground':'#161929','labelBackground':'#161929','labelTextColor':'#E2E8F0'}}}%%
 flowchart TB
     VR["🎧 <b>Unity · Meta Quest 3</b><br/>WS /session/{id}?client_type=vr"]
 
@@ -44,10 +44,10 @@ flowchart TB
     WS -- "live telemetry frames ▸" --> APP
     APP -- "REST" --> HUB
 
-    classDef client fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px,color:#0C2A5B
-    classDef svc fill:#EDE9FE,stroke:#7C3AED,stroke-width:2px,color:#2E1065
-    classDef store fill:#DCFCE7,stroke:#22C55E,stroke-width:2px,color:#052E16
-    classDef hubcore fill:#F5F3FF,stroke:#5B21B6,stroke-width:3px,color:#2E1065
+    classDef client fill:#12243F,stroke:#60A5FA,stroke-width:2px,color:#DBEAFE
+    classDef svc fill:#241A47,stroke:#A78BFA,stroke-width:2px,color:#EDE9FE
+    classDef store fill:#0F2E1D,stroke:#4ADE80,stroke-width:2px,color:#DCFCE7
+    classDef hubcore fill:#3B0F87,stroke:#DDD6FE,stroke-width:3px,color:#F5F3FF
     class VR,APP client
     class SARVAM,METRICS,EMO,SCORE,XAI,TWIN svc
     class DB store

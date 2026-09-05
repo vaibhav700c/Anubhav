@@ -58,7 +58,7 @@ Two clients, one hub. The **FastAPI Intelligence Hub** is the single point where
 insight — and the only place that talks to third-party AI.
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','primaryColor':'#EDE9FE','primaryTextColor':'#1E1B4B','primaryBorderColor':'#7C3AED','lineColor':'#7C3AED','clusterBkg':'#FAF8FF','clusterBorder':'#C4B5FD'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#1E2235','primaryTextColor':'#E2E8F0','primaryBorderColor':'#A78BFA','secondaryColor':'#161929','tertiaryColor':'#14172A','mainBkg':'#1E2235','nodeBorder':'#A78BFA','nodeTextColor':'#E2E8F0','lineColor':'#A78BFA','textColor':'#E2E8F0','titleColor':'#DDD6FE','clusterBkg':'#14172A','clusterBorder':'#4C1D95','edgeLabelBackground':'#161929','labelBackground':'#161929','labelTextColor':'#E2E8F0'}}}%%
 flowchart TB
     subgraph CLIENTS["🎧  CLIENTS"]
         direction LR
@@ -104,11 +104,11 @@ flowchart TB
     SARVAM -.->|"graceful fallback if down"| SAPI
     EMO -.->|"quota-aware"| HAPI
 
-    classDef client fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px,color:#0C2A5B
-    classDef svc fill:#EDE9FE,stroke:#7C3AED,stroke-width:2px,color:#2E1065
-    classDef store fill:#DCFCE7,stroke:#22C55E,stroke-width:2px,color:#052E16
-    classDef ext fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px,color:#451A03
-    classDef hubcore fill:#F5F3FF,stroke:#5B21B6,stroke-width:3px,color:#2E1065
+    classDef client fill:#12243F,stroke:#60A5FA,stroke-width:2px,color:#DBEAFE
+    classDef svc fill:#241A47,stroke:#A78BFA,stroke-width:2px,color:#EDE9FE
+    classDef store fill:#0F2E1D,stroke:#4ADE80,stroke-width:2px,color:#DCFCE7
+    classDef ext fill:#3A2A0A,stroke:#FBBF24,stroke-width:2px,color:#FDE68A
+    classDef hubcore fill:#3B0F87,stroke:#DDD6FE,stroke-width:3px,color:#F5F3FF
 
     class VR,APP client
     class SARVAM,METRICS,EMO,SCORE,XAI,TWIN svc
@@ -128,7 +128,7 @@ flowchart TB
 What actually happens between "you start talking" and "you see why your score moved".
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','primaryColor':'#EDE9FE','primaryTextColor':'#1E1B4B','primaryBorderColor':'#7C3AED','lineColor':'#6D28D9','signalColor':'#4C1D95','actorBkg':'#EDE9FE','actorBorder':'#7C3AED','actorTextColor':'#2E1065','labelBoxBkg':'#DDD6FE','noteBkgColor':'#FEF3C7','noteBorderColor':'#F59E0B'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#241A47','primaryTextColor':'#EDE9FE','primaryBorderColor':'#A78BFA','lineColor':'#A78BFA','textColor':'#E2E8F0','actorBkg':'#241A47','actorBorder':'#A78BFA','actorTextColor':'#EDE9FE','actorLineColor':'#4C1D95','signalColor':'#C4B5FD','signalTextColor':'#E2E8F0','messageLine0':'#C4B5FD','messageLine1':'#C4B5FD','messageText':'#E2E8F0','labelBoxBkgColor':'#2E1065','labelBoxBorderColor':'#A78BFA','labelTextColor':'#EDE9FE','loopTextColor':'#E2E8F0','sequenceNumberColor':'#0D0F1A','activationBkgColor':'#4C1D95','activationBorderColor':'#C4B5FD','noteBkgColor':'#3A2A0A','noteBorderColor':'#FBBF24','noteTextColor':'#FEF3C7'}}}%%
 sequenceDiagram
     autonumber
     participant VR as 🎧 Unity VR
@@ -186,7 +186,7 @@ depends on a network.
 ### 2 · Three-Tier Voice & Speech Metrics — `MetricsService`
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','lineColor':'#7C3AED'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#1E2235','primaryTextColor':'#E2E8F0','primaryBorderColor':'#A78BFA','secondaryColor':'#161929','tertiaryColor':'#14172A','mainBkg':'#1E2235','nodeBorder':'#A78BFA','nodeTextColor':'#E2E8F0','lineColor':'#A78BFA','textColor':'#E2E8F0','titleColor':'#DDD6FE','clusterBkg':'#14172A','clusterBorder':'#4C1D95','edgeLabelBackground':'#161929','labelBackground':'#161929','labelTextColor':'#E2E8F0'}}}%%
 flowchart LR
     A["🎙 audio chunk<br/>+ word timings"] --> T1
     A --> T3
@@ -203,9 +203,9 @@ flowchart LR
     V --> X["XAIService"]
     V --> E["EmotionService"]
 
-    classDef tier fill:#EDE9FE,stroke:#7C3AED,stroke-width:2px,color:#2E1065
-    classDef io fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px,color:#0C2A5B
-    classDef out fill:#DCFCE7,stroke:#22C55E,stroke-width:2px,color:#052E16
+    classDef tier fill:#241A47,stroke:#A78BFA,stroke-width:2px,color:#EDE9FE
+    classDef io fill:#12243F,stroke:#60A5FA,stroke-width:2px,color:#DBEAFE
+    classDef out fill:#0F2E1D,stroke:#4ADE80,stroke-width:2px,color:#DCFCE7
     class T1,T2,T3 tier
     class A,B io
     class V,S,X,E out
@@ -220,7 +220,7 @@ flowchart LR
 ### 3 · Dual-Path Emotion Sensing — `EmotionService`
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','lineColor':'#7C3AED'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#1E2235','primaryTextColor':'#E2E8F0','primaryBorderColor':'#A78BFA','secondaryColor':'#161929','tertiaryColor':'#14172A','mainBkg':'#1E2235','nodeBorder':'#A78BFA','nodeTextColor':'#E2E8F0','lineColor':'#A78BFA','textColor':'#E2E8F0','titleColor':'#DDD6FE','clusterBkg':'#14172A','clusterBorder':'#4C1D95','edgeLabelBackground':'#161929','labelBackground':'#161929','labelTextColor':'#E2E8F0'}}}%%
 flowchart TD
     IN["audio + features + transcript"] --> Q{"Hume key present<br/>and quota alive?"}
     Q -- yes --> H["<b>Hume AI EVI</b><br/>48-dimension palette"]
@@ -231,10 +231,10 @@ flowchart TD
     MAP --> OUT["<b>Confident · Nervous · Bored<br/>Excited · Monotone · Calm</b><br/>+ confidence + source"]
     OUT --> THEME["Flutter theme key<br/>confident · nervous · excited<br/>calm · neutral"]
 
-    classDef primary fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px,color:#0C2A5B
-    classDef fallback fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px,color:#451A03
-    classDef result fill:#DCFCE7,stroke:#22C55E,stroke-width:2px,color:#052E16
-    classDef gate fill:#F5F3FF,stroke:#7C3AED,stroke-width:2px,color:#2E1065
+    classDef primary fill:#12243F,stroke:#60A5FA,stroke-width:2px,color:#DBEAFE
+    classDef fallback fill:#3A2A0A,stroke:#FBBF24,stroke-width:2px,color:#FDE68A
+    classDef result fill:#0F2E1D,stroke:#4ADE80,stroke-width:2px,color:#DCFCE7
+    classDef gate fill:#1E2235,stroke:#A78BFA,stroke-width:2px,color:#E2E8F0
     class H primary
     class F fallback
     class OUT,THEME,MAP result
@@ -321,7 +321,7 @@ The top 3 by absolute impact are turned into plain sentences:
 ## ✦ Data Model
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','lineColor':'#7C3AED','primaryColor':'#EDE9FE','primaryBorderColor':'#7C3AED','primaryTextColor':'#2E1065'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#241A47','primaryBorderColor':'#A78BFA','primaryTextColor':'#EDE9FE','lineColor':'#A78BFA','textColor':'#E2E8F0','mainBkg':'#241A47','nodeBorder':'#A78BFA','attributeBackgroundColorOdd':'#1E2235','attributeBackgroundColorEven':'#161929'}}}%%
 erDiagram
     USERS ||--o{ SESSIONS : "practises"
     USERS ||--o| DIGITAL_TWIN : "is modelled by"
