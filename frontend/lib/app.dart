@@ -6,6 +6,7 @@ import 'providers/history_provider.dart';
 import 'providers/session_provider.dart';
 import 'providers/twin_provider.dart';
 import 'screens/home_shell.dart';
+import 'screens/landing_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/pre_session_setup_screen.dart';
 import 'screens/vr_handoff_screen.dart';
@@ -44,7 +45,9 @@ class AnubhavApp extends StatelessWidget {
         theme: AppTheme.light,
         initialRoute: '/',
         routes: {
-          '/': (_) => const HomeShell(),
+          '/': (_) => const LandingScreen(),
+          '/home': (_) => const HomeShell(),
+          '/landing': (_) => const LandingScreen(checkFirstTime: false),
           '/onboarding': (_) => const OnboardingScreen(),
           '/setup': (_) => const PreSessionSetupScreen(),
           '/vr-handoff': (_) => const VrHandoffScreen(),

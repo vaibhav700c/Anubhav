@@ -119,6 +119,8 @@ class WebSocketHub:
     ):
         """Process incoming audio/speech chunk from VR headset."""
         session = self.get_or_create_session(session_id)
+        if session.mock_task and not session.mock_task.done():
+            session.mock_task.cancel()
 
         # 1. Speech-to-text via Sarvam Saaras
         transcript_text = text_chunk or ""

@@ -159,6 +159,16 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: 'Hume AI EVI + DSP Prosody Fallback',
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AnubhavColors.textTertiary),
                 ),
+                _buildDivider(),
+                _buildSettingsRow(
+                  icon: Icons.play_circle_outline_rounded,
+                  title: 'Preview Landing Screen',
+                  subtitle: 'Replay 3-second splash experience',
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AnubhavColors.textTertiary),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/landing');
+                  },
+                ),
               ]),
               const SizedBox(height: 24),
 
@@ -241,8 +251,9 @@ class SettingsScreen extends StatelessWidget {
     required String title,
     required String subtitle,
     required Widget trailing,
+    VoidCallback? onTap,
   }) {
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       child: Row(
         children: [
@@ -269,6 +280,18 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap != null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: row,
+        ),
+      );
+    }
+    return row;
   }
 
   Widget _buildDivider() {
