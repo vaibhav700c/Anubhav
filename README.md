@@ -1,6 +1,5 @@
-# VoxGenius (Anubhav) — VR Multilingual AI Public Speaking Coach
+# Anubhav — VR Multilingual AI Public Speaking Coach
 
-**Team Kaala Teeka▪️ | graVITas'26**
 
 > An immersive, multilingual public speaking coach that listens in VR, transcribes and coaches in 22 Indian languages, reads emotional prosody, scores delivery with Explainable AI (SHAP), and tracks longitudinal growth through a persistent Digital Twin.
 
@@ -224,5 +223,5 @@ flutter run
 ---
 
 ## License & Credits
-Developed by **Team Kaala Teeka▪️** for **graVITas'26**.
+Developed by **Team Kaala Teeka▪️**
 All speech, fluency, and emotion metrics are model-derived proxies designed for practice and coaching, and do not constitute clinical assessments.
