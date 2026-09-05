@@ -35,7 +35,14 @@ class _LiveDashboardScreenState extends State<LiveDashboardScreen> with SingleTi
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SessionProvider>().startSession(_demoSessionId);
+      final args = ModalRoute.of(context)?.settings.arguments;
+      final setup = args is Map ? args : const <String, String>{};
+      context.read<SessionProvider>().startSession(
+            _demoSessionId,
+            topic: setup['topic'] as String?,
+            language: setup['language'] as String?,
+            audienceSize: setup['audienceSize'] as String?,
+          );
     });
   }
 

@@ -77,4 +77,35 @@ class ApiService {
     final res = await _dio.get('$twinEndpoint/$userId');
     return DigitalTwin.fromJson(res.data as Map<String, dynamic>);
   }
+
+  // ─── Session Complete ─────────────────────────────────────────────────────
+
+  /// Finalizes a session: triggers metrics/SHAP/Digital-Twin computation and
+  /// persistence on the hub. Safe to call even if the VR side already called
+  /// this for the same session_id - the hub just recomputes and overwrites
+  /// the same record, so whichever client ends the session first for the
+  /// user (phone or headset) is enough to produce a real report instead of
+  /// falling back to the hub's generic mock-data response.
+  ///
+  /// [topic] / [language] / [audienceSize] are the choices made on the
+  /// Pre-Session Setup screen - the hub has no separate "start session"
+  /// endpoint, so this is the only point where they can reach it.
+  Future<void> completeSession({
+    required String sessionId,
+    required String userId,
+    String? topic,
+    String? language,
+    String? audienceSize,
+  }) async {
+    if (useMockData) {
+      return; // nothing to finalize against a mock hub
+    }
+    await _dio.post('$sessionEndpoint/complete', data: {
+      'session_id': sessionId,
+      'user_id': userId,
+      if (topic != null) 'topic': topic,
+      if (language != null) 'language': language,
+      if (audienceSize != null) 'audience_size': audienceSize,
+    });
+  }
 }

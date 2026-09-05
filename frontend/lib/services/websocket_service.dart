@@ -59,7 +59,10 @@ class WebSocketService {
     if (_disposed) return;
     _emit(WsConnectionState.reconnecting);
     try {
-      final uri = Uri.parse('$wsUrl$wsSessionEndpoint/$sessionId');
+      // client_type=app is explicit (rather than relying on the hub's
+      // default) so this doesn't silently register as the VR side if that
+      // default ever changes.
+      final uri = Uri.parse('$wsUrl$wsSessionEndpoint/$sessionId?client_type=app');
       _channel = WebSocketChannel.connect(uri);
       _channelSub = _channel!.stream.listen(
         _onData,

@@ -23,6 +23,10 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
     'English',
   ];
 
+  /// NPC counts shown next to each size option - also what's sent to the hub
+  /// as audience_size, since it's more meaningful there than "Small/Medium/Large".
+  static const List<String> _audienceSizeCounts = ['10', '25', '50'];
+
   final List<String> _topicSuggestions = [
     'Job Interview',
     'Wedding Speech',
@@ -229,7 +233,17 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
                       height: 56,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/vr-handoff');
+                          Navigator.pushNamed(
+                            context,
+                            '/vr-handoff',
+                            arguments: {
+                              'topic': _topicController.text.trim().isEmpty
+                                  ? 'Practice Session'
+                                  : _topicController.text.trim(),
+                              'language': _selectedLanguage,
+                              'audienceSize': _audienceSizeCounts[_selectedAudienceSize],
+                            },
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AnubhavColors.orange,

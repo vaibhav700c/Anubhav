@@ -36,7 +36,10 @@ class _VrHandoffScreenState extends State<VrHandoffScreen> {
   }
 
   void _navigateToLive() {
-    Navigator.pushReplacementNamed(context, '/live');
+    // Forward whatever Setup passed us (topic/language/audienceSize) so the
+    // Live Dashboard can pass it on to the hub when the session ends.
+    final args = ModalRoute.of(context)?.settings.arguments;
+    Navigator.pushReplacementNamed(context, '/live', arguments: args);
   }
 
   @override
