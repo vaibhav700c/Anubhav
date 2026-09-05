@@ -4,16 +4,16 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// LandingScreen:
-/// Displays the landing_page.png image on the user's first launch for 3 seconds,
+/// Displays the landing_page.png hero visual on app launch/cold restart for 5 seconds,
 /// then automatically navigates to the home page ('/home').
 class LandingScreen extends StatefulWidget {
-  /// If true, checks SharedPreferences and only shows if first launch.
-  /// If false, always shows for 3 seconds (useful for demo/replay/testing).
+  /// If true, checks SharedPreferences to only show once.
+  /// Defaults to false so it reliably displays on cold restart / startup.
   final bool checkFirstTime;
 
   const LandingScreen({
     super.key,
-    this.checkFirstTime = true,
+    this.checkFirstTime = false,
   });
 
   @override
@@ -22,39 +22,22 @@ class LandingScreen extends StatefulWidget {
 
 class _LandingScreenState extends State<LandingScreen> {
   Timer? _timer;
-  bool _isLoading = true;
+  bool _isLoading = false;
   double _progress = 0.0;
   Timer? _progressTimer;
 
   @override
   void initState() {
     super.initState();
-    _handleFirstLaunchFlow();
+    if (widget.checkFirstTime) {
+      _isLoading = true;
+      _handleFirstLaunchFlow();
+    } else {
+      _startLandingCountdown();
+    }
   }
 
-  Future<void> _handleFirstLaunchFlow() async {
-    if (widget.checkFirstTime) {
-      final prefs = await SharedPreferences.getInstance();
-      final hasSeen = prefs.getBool('has_seen_landing') ?? false;
-
-      if (hasSeen) {
-        // User has already opened the app previously; skip straight to home
-        if (mounted) {
-          _navigateToHome(immediate: true);
-        }
-        return;
-      }
-
-      // First time opening the app! Mark as seen so subsequent opens bypass
-      await prefs.setBool('has_seen_landing', true);
-    }
-
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = false;
-    });
-
+  void _startLandingCountdown() {
     // Animate progress bar over 5 seconds
     const totalMs = 5000;
     const intervalMs = 50;
@@ -79,6 +62,30 @@ class _LandingScreenState extends State<LandingScreen> {
         _navigateToHome();
       }
     });
+  }
+
+  Future<void> _handleFirstLaunchFlow() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeen = prefs.getBool('has_seen_landing') ?? false;
+
+    if (hasSeen) {
+      // User has already opened the app previously; skip straight to home
+      if (mounted) {
+        _navigateToHome(immediate: true);
+      }
+      return;
+    }
+
+    // First time opening the app! Mark as seen
+    await prefs.setBool('has_seen_landing', true);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    _startLandingCountdown();
   }
 
   void _navigateToHome({bool immediate = false}) {
