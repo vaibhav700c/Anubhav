@@ -77,22 +77,29 @@ class _TwinTrendChartState extends State<TwinTrendChart> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Score Trajectory',
-                    style: AnubhavTextStyles.titleMedium,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Consistent growth across sessions',
-                    style: AnubhavTextStyles.bodySmall,
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Score Trajectory',
+                      style: AnubhavTextStyles.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Consistent growth across sessions',
+                      style: AnubhavTextStyles.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: AnubhavColors.tealSurface,
                   borderRadius: BorderRadius.circular(14),
@@ -235,13 +242,17 @@ class _TwinTrendChartState extends State<TwinTrendChart> {
           const SizedBox(height: 12),
 
           // Legend at bottom
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLegendBullet(AnubhavColors.teal, 'Recorded Sessions', isDashed: false),
-              const SizedBox(width: 20),
-              _buildLegendBullet(AnubhavColors.orange, 'Digital Twin Projection', isDashed: true),
-            ],
+          Center(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 6,
+              children: [
+                _buildLegendBullet(AnubhavColors.teal, 'Recorded Sessions', isDashed: false),
+                _buildLegendBullet(AnubhavColors.orange, 'Digital Twin Projection', isDashed: true),
+              ],
+            ),
           ),
         ],
       ),

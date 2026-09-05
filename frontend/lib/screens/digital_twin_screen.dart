@@ -45,19 +45,22 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Speaking Journey',
-                              style: AnubhavTextStyles.headlineLarge,
-                            ),
-                            Text(
-                              'Longitudinal AI Digital Twin Modeling',
-                              style: AnubhavTextStyles.bodySmall,
-                            ),
-                          ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Speaking Journey',
+                                style: AnubhavTextStyles.headlineLarge,
+                              ),
+                              Text(
+                                'Longitudinal AI Digital Twin Modeling',
+                                style: AnubhavTextStyles.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
@@ -65,6 +68,7 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.auto_awesome, color: AnubhavColors.teal, size: 14),
                               const SizedBox(width: 4),
@@ -93,14 +97,17 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    Row(
-                      children: [
-                        _buildMilestoneCard(Icons.emoji_events_rounded, '5-Day Streak', 'Consistent practice king'),
-                        const SizedBox(width: 10),
-                        _buildMilestoneCard(Icons.workspace_premium_rounded, '80+ Score', 'Mastery band unlocked'),
-                        const SizedBox(width: 10),
-                        _buildMilestoneCard(Icons.speed_rounded, 'Pitch Pro', 'Pacing under 145 WPM'),
-                      ],
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildMilestoneCard(Icons.emoji_events_rounded, '5-Day Streak', 'Consistent practice king'),
+                          const SizedBox(width: 10),
+                          _buildMilestoneCard(Icons.workspace_premium_rounded, '80+ Score', 'Mastery band unlocked'),
+                          const SizedBox(width: 10),
+                          _buildMilestoneCard(Icons.speed_rounded, 'Pitch Pro', 'Pacing under 145 WPM'),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 24),
 

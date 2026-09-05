@@ -45,7 +45,7 @@ class AnubhavApp extends StatelessWidget {
         theme: AppTheme.light,
         initialRoute: '/',
         routes: {
-          '/': (_) => const LandingScreen(),
+          '/': (_) => const LandingScreen(checkFirstTime: true),
           '/home': (_) => const HomeShell(),
           '/landing': (_) => const LandingScreen(checkFirstTime: false),
           '/onboarding': (_) => const OnboardingScreen(),

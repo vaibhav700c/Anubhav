@@ -55,8 +55,8 @@ class _LandingScreenState extends State<LandingScreen> {
       _isLoading = false;
     });
 
-    // Animate progress bar over 3 seconds
-    const totalMs = 3000;
+    // Animate progress bar over 5 seconds
+    const totalMs = 5000;
     const intervalMs = 50;
     const steps = totalMs ~/ intervalMs;
     int currentStep = 0;
@@ -73,7 +73,7 @@ class _LandingScreenState extends State<LandingScreen> {
       }
     });
 
-    // 3-second automatic redirect to home
+    // 5-second automatic redirect to home
     _timer = Timer(const Duration(milliseconds: totalMs), () {
       if (mounted) {
         _navigateToHome();

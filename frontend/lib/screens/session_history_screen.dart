@@ -221,40 +221,49 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AnubhavColors.bgWarmPeach,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                langTag,
-                                style: AnubhavTextStyles.bodySmall.copyWith(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: AnubhavColors.teal,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AnubhavColors.bgWarmPeach,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  langTag,
+                                  style: AnubhavTextStyles.bodySmall.copyWith(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: AnubhavColors.teal,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              formattedDate,
-                              style: AnubhavTextStyles.bodySmall,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          topicTitle,
-                          style: AnubhavTextStyles.titleLarge,
-                        ),
-                      ],
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  formattedDate,
+                                  style: AnubhavTextStyles.bodySmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            topicTitle,
+                            style: AnubhavTextStyles.titleLarge,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 12),
 
                     // Circular Fluency Score Badge in Deep Teal
                     Container(
@@ -300,14 +309,20 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Score: ${session.overallScore} • Fluency • Good Pace',
-                      style: AnubhavTextStyles.bodySmall.copyWith(
-                        color: AnubhavColors.textSecondary,
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Text(
+                        'Score: ${session.overallScore} • Fluency • Good Pace',
+                        style: AnubhavTextStyles.bodySmall.copyWith(
+                          color: AnubhavColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 8),
                     const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.insights_rounded, size: 16, color: AnubhavColors.teal),
                         SizedBox(width: 4),
