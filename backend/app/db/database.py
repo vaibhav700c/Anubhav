@@ -1,0 +1,34 @@
+"""Database connection and session handling using SQLAlchemy."""
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+from app.config import settings
+
+# For SQLite, check_same_thread needs to be False for multithreaded FastAPI requests
+connect_args = {}
+if settings.DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+
+def get_db():
+    """Dependency for obtaining database sessions."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db():
+    """Create all tables defined in Base."""
+    import app.db.models  # noqa: F401
+    Base.metadata.create_all(bind=engine)
+
+# Auto-initialize database schema
+init_db()
+

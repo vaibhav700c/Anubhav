@@ -1,0 +1,38 @@
+name: anubhav
+description: "Anubhav — VR Public Speaking Coach Companion App (Team Kaala Teeka, graVITas'26)"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  provider: ^6.1.2
+
+  # Charts
+  fl_chart: ^0.69.0
+
+  # Networking
+  web_socket_channel: ^3.0.1
+  dio: ^5.7.0
+
+  # Local persistence
+  shared_preferences: ^2.3.3
+
+  # Utilities
+  intl: ^0.19.0
+  google_fonts: ^6.2.1
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
