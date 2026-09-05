@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/desi_decorations.dart';
 
 /// Pre-Session Setup Screen ("Setup Your Practice")
 class PreSessionSetupScreen extends StatefulWidget {
@@ -38,10 +39,8 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AnubhavGradients.warmBackground,
-        ),
+      backgroundColor: AnubhavColors.bgCream,
+      body: DesiPatternBackground(
         child: SafeArea(
           child: Column(
             children: [
@@ -94,7 +93,7 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
                         'Practice Language',
                         style: AnubhavTextStyles.titleLarge,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         'Select the language you want to speak and receive coaching in',
                         style: AnubhavTextStyles.bodySmall,
@@ -118,13 +117,10 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
                               color: isSelected ? Colors.white : AnubhavColors.textPrimary,
                               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                             ),
-                            backgroundColor: Colors.white,
+                            backgroundColor: AnubhavColors.cardBg,
                             selectedColor: AnubhavColors.orange,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
-                              side: BorderSide(
-                                color: isSelected ? AnubhavColors.orange : AnubhavColors.cardBorder,
-                              ),
                             ),
                             elevation: isSelected ? 2 : 0,
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -138,7 +134,7 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
                         'Choose a Topic',
                         style: AnubhavTextStyles.titleLarge,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         'Set the scenario to simulate the appropriate audience vibe',
                         style: AnubhavTextStyles.bodySmall,
@@ -147,7 +143,7 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
 
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AnubhavColors.cardBg,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: AnubhavColors.cardBorder),
                         ),
@@ -195,7 +191,7 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
                         'Audience Size',
                         style: AnubhavTextStyles.titleLarge,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         'Controls the number and distribution of responsive VR avatars',
                         style: AnubhavTextStyles.bodySmall,
@@ -205,7 +201,7 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AnubhavColors.cardBg,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: AnubhavColors.cardBorder),
                         ),
@@ -245,7 +241,7 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
                           shadowColor: AnubhavColors.orange.withValues(alpha: 0.35),
                         ),
                         child: Text(
-                          'Put on your headset 🥽',
+                          'Put on your headset',
                           style: AnubhavTextStyles.labelLarge.copyWith(fontSize: 16),
                         ),
                       ),

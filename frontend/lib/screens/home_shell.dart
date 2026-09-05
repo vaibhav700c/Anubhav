@@ -49,7 +49,7 @@ class _HomeShellState extends State<HomeShell> {
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AnubhavColors.cardBg,
           border: Border(
             top: BorderSide(color: AnubhavColors.divider, width: 1),
           ),

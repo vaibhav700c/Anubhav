@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/history_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/desi_decorations.dart';
 import '../widgets/score_gauge.dart';
 
 /// Home / Dashboard Screen matching the approved visual design system
@@ -19,74 +20,97 @@ class HomeScreen extends StatelessWidget {
         : null;
     final latestScore = latestSession?.overallScore ?? 78;
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: AnubhavGradients.warmBackground,
-      ),
-      child: SafeArea(
+    return DesiPatternBackground(
+      child: Stack(
+        children: [
+          // Single mandala for the whole screen — peeks from behind the
+          // header, never repeated per-card.
+          const Positioned(
+            top: -70,
+            right: -70,
+            child: MandalaCorner(size: 220),
+          ),
+          SafeArea(
         bottom: false,
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ─── Brand wordmark ──────────────────────────────────────
+              Text(
+                'ANUBHAV',
+                style: AnubhavTextStyles.bodySmall.copyWith(
+                  color: AnubhavColors.teal,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 3.0,
+                ),
+              ),
+              const SizedBox(height: 8),
               // ─── Header: Greeting + Avatar + Streak ──────────────────────────
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: AnubhavColors.tealSurface,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AnubhavColors.teal.withValues(alpha: 0.3),
-                            width: 1.5,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: AnubhavColors.tealSurface,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AnubhavColors.teal.withValues(alpha: 0.3),
+                              width: 1.5,
+                            ),
                           ),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'VG',
-                            style: TextStyle(
-                              color: AnubhavColors.teal,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
+                          child: const Center(
+                            child: Text(
+                              'VG',
+                              style: TextStyle(
+                                color: AnubhavColors.teal,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Namaste, Vaibhav 👋',
-                            style: AnubhavTextStyles.titleLarge,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Namaste, Vaibhav',
+                                style: AnubhavTextStyles.titleLarge,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Ready for your practice today?',
+                                style: AnubhavTextStyles.bodySmall,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          Text(
-                            'Ready for your practice today?',
-                            style: AnubhavTextStyles.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                  // Streak Indicator (Flame + Count)
+                  const SizedBox(width: 10),
+                  // Streak Indicator (Count pill, no border)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AnubhavColors.orangeSurface,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AnubhavColors.orange.withValues(alpha: 0.25),
-                      ),
                     ),
                     child: Row(
                       children: [
-                        const Text('🔥', style: TextStyle(fontSize: 14)),
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 16,
+                          color: AnubhavColors.orange,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '5 Days',
@@ -107,12 +131,12 @@ class HomeScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AnubhavColors.cardBg,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: AnubhavColors.cardBorder),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x0C1F5B5B),
+                      color: Color(0x147A1F1F),
                       blurRadius: 20,
                       offset: Offset(0, 6),
                     ),
@@ -149,7 +173,7 @@ class HomeScreen extends StatelessWidget {
                               style: AnubhavTextStyles.headlineMedium,
                             ),
                             Text(
-                              '🇮🇳 Hindi (हिन्दी) • 3m 45s',
+                              'Hindi (हिन्दी) • 3m 45s',
                               style: AnubhavTextStyles.bodySmall,
                             ),
                           ],
@@ -183,21 +207,22 @@ class HomeScreen extends StatelessWidget {
                     Center(
                       child: ScoreGauge(
                         score: latestScore,
-                        size: 155,
+                        size: 165,
                         label: 'Overall Fluency Score',
+                        ringColor: AnubhavColors.darkGreen,
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Quick metric tags
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Quick metric tags (Wrap — never overflows narrow screens)
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 10,
+                      runSpacing: 8,
                       children: [
-                        _buildHeroTag('⚡ 142 WPM Pace'),
-                        const SizedBox(width: 10),
-                        _buildHeroTag('🎯 94% Continuity'),
-                        const SizedBox(width: 10),
-                        _buildHeroTag('🙂 Confident Flow'),
+                        _buildHeroTag('142 WPM Pace'),
+                        _buildHeroTag('94% Continuity'),
+                        _buildHeroTag('Confident Flow'),
                       ],
                     ),
                   ],
@@ -238,6 +263,11 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 22),
 
               // ─── Secondary Quick-Access Cards ────────────────────────────────
+              Text(
+                'Continue your journey',
+                style: AnubhavTextStyles.titleLarge,
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   // View Progress (Twin)
@@ -251,12 +281,12 @@ class HomeScreen extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AnubhavColors.cardBg,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: AnubhavColors.cardBorder),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x081F5B5B),
+                              color: Color(0x147A1F1F),
                               blurRadius: 12,
                               offset: Offset(0, 4),
                             ),
@@ -305,12 +335,12 @@ class HomeScreen extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AnubhavColors.cardBg,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: AnubhavColors.cardBorder),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x081F5B5B),
+                              color: Color(0x147A1F1F),
                               blurRadius: 12,
                               offset: Offset(0, 4),
                             ),
@@ -348,50 +378,12 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-
-              // ─── Coaching Advice Callout ──────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AnubhavColors.tealSurface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AnubhavColors.teal.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('💡', style: TextStyle(fontSize: 22)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Coach Note (Sarvam AI)',
-                            style: AnubhavTextStyles.labelMedium.copyWith(
-                              color: AnubhavColors.teal,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Your flow is strong, but focus on reducing "um"s and "matlab" during transition slides.',
-                            style: AnubhavTextStyles.bodyMedium.copyWith(
-                              color: AnubhavColors.textPrimary,
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 40),
             ],
           ),
         ),
+        ),
+        ],
       ),
     );
   }

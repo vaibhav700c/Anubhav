@@ -28,10 +28,11 @@ class ShapFeature {
         'explanation': explanation,
       };
 
-  /// Display-friendly label (replaces underscores with spaces, title-cases).
+  /// Display-friendly label: "filler_words" -> "Filler Words".
   String get displayName {
     return feature
         .split('_')
+        .where((w) => w.isNotEmpty)
         .map((w) => w[0].toUpperCase() + w.substring(1))
         .join(' ');
   }

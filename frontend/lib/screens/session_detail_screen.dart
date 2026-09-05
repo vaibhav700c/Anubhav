@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/detail_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/emotion_timeline_chart.dart';
+import '../widgets/desi_decorations.dart';
+import '../widgets/emotion_graph.dart';
 import '../widgets/score_gauge.dart';
 import '../widgets/shap_bar_chart.dart';
 
@@ -51,7 +52,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
         ),
         child: SafeArea(
           child: isLoading || session == null
-              ? const Center(child: CircularProgressIndicator(color: AnubhavColors.teal))
+              ? const Center(child: MandalaLoadingScreen(message: 'Loading session details...'))
               : Column(
                   children: [
                     // ─── Header ────────────────────────────────────────────────
@@ -73,7 +74,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                                   style: AnubhavTextStyles.headlineMedium,
                                 ),
                                 Text(
-                                  'Job Interview Prep • 🇮🇳 हिन्दी',
+                                  'Job Interview Prep • हिन्दी',
                                   style: AnubhavTextStyles.bodySmall,
                                 ),
                               ],
@@ -119,6 +120,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                             score: session.overallScore,
                             size: 110,
                             label: '',
+                            ringColor: AnubhavColors.darkGreen,
                           ),
                           const SizedBox(width: 18),
                           Expanded(
@@ -186,7 +188,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                         tabs: const [
                           Tab(text: 'Transcript'),
                           Tab(text: 'Why This Score'),
-                          Tab(text: 'Timeline'),
+                          Tab(text: 'Graph'),
                         ],
                       ),
                     ),
@@ -281,7 +283,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            '⚠️ Fillers Highlighted',
+                            'Fillers Highlighted',
                             style: AnubhavTextStyles.bodySmall.copyWith(
                               color: const Color(0xFF92400E),
                               fontWeight: FontWeight.w700,
@@ -336,7 +338,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
               ),
               child: Text(
-                'Next: Why This Score ➔',
+                'Next: Why This Score',
                 style: AnubhavTextStyles.labelLarge,
               ),
             ),
@@ -461,7 +463,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
               ),
               child: Text(
-                'Next: Emotion Timeline ➔',
+                'Next: Emotion Timeline',
                 style: AnubhavTextStyles.labelLarge,
               ),
             ),
@@ -472,14 +474,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
     );
   }
 
-  // ─── Tab 3: Emotion Timeline ──────────────────────────────────────────────
+  // ─── Tab 3: Emotion Graph ─────────────────────────────────────────────────
   Widget _buildEmotionTab(List<dynamic> timeline) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          EmotionTimelineChart(timeline: timeline.cast()),
+          EmotionGraph(timeline: timeline.cast()),
           const SizedBox(height: 20),
 
           // Coaching breakdown of emotion

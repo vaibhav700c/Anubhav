@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
+import '../widgets/desi_decorations.dart';
 
 /// 3-Screen Onboarding Experience matching the approved mockups
 class OnboardingScreen extends StatefulWidget {
@@ -32,10 +33,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AnubhavGradients.coolBackground,
-        ),
+      backgroundColor: AnubhavColors.bgCream,
+      body: DesiPatternBackground(
         child: SafeArea(
           child: Column(
             children: [
@@ -61,10 +60,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          'Anubhav',
+                          'ANUBHAV',
                           style: AnubhavTextStyles.headlineMedium.copyWith(
                             color: AnubhavColors.teal,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2.5,
                           ),
                         ),
                       ],
@@ -177,12 +177,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             width: double.infinity,
             height: 260,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AnubhavColors.cardBg,
               borderRadius: BorderRadius.circular(28),
               border: Border.all(color: AnubhavColors.cardBorder),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x0C1F5B5B),
+                  color: Color(0x147A1F1F),
                   blurRadius: 24,
                   offset: Offset(0, 8),
                 ),
@@ -225,9 +225,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildAudienceBadge('👥 Reactive Crowd'),
+                        _buildAudienceBadge('Reactive Crowd'),
                         const SizedBox(width: 8),
-                        _buildAudienceBadge('🎤 Real-time Coaching'),
+                        _buildAudienceBadge('Real-time Coaching'),
                       ],
                     ),
                   ],
@@ -285,12 +285,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             width: double.infinity,
             height: 260,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AnubhavColors.cardBg,
               borderRadius: BorderRadius.circular(28),
               border: Border.all(color: AnubhavColors.cardBorder),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x0C1F5B5B),
+                  color: Color(0x147A1F1F),
                   blurRadius: 24,
                   offset: Offset(0, 8),
                 ),
@@ -404,12 +404,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             height: 260,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AnubhavColors.cardBg,
               borderRadius: BorderRadius.circular(28),
               border: Border.all(color: AnubhavColors.cardBorder),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x0C1F5B5B),
+                  color: Color(0x147A1F1F),
                   blurRadius: 24,
                   offset: Offset(0, 8),
                 ),

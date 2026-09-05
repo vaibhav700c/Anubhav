@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Emotion badge pill displaying the unified label and emoji
+/// Emotion badge pill displaying the unified label
 class EmotionBadge extends StatelessWidget {
   final String emotion;
   final double fontSize;
-  final bool showEmoji;
 
   const EmotionBadge({
     super.key,
     required this.emotion,
     this.fontSize = 13,
-    this.showEmoji = true,
   });
 
   @override
@@ -31,13 +29,6 @@ class EmotionBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (showEmoji) ...[
-            Text(
-              meta.emoji,
-              style: TextStyle(fontSize: fontSize + 1),
-            ),
-            const SizedBox(width: 5),
-          ],
           Text(
             meta.label,
             style: AnubhavTextStyles.labelMedium.copyWith(

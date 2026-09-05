@@ -8,6 +8,7 @@ class ScoreGauge extends StatelessWidget {
   final double size;
   final String label;
   final bool animate;
+  final Color? ringColor;
 
   const ScoreGauge({
     super.key,
@@ -15,6 +16,7 @@ class ScoreGauge extends StatelessWidget {
     this.size = 180,
     this.label = 'Overall Fluency Score',
     this.animate = true,
+    this.ringColor,
   });
 
   @override
@@ -25,7 +27,7 @@ class ScoreGauge extends StatelessWidget {
       curve: Curves.easeOutCubic,
       builder: (context, value, _) {
         final progress = (value / 100.0).clamp(0.0, 1.0);
-        final color = scoreColor(value);
+        final color = ringColor ?? (value >= 65 ? AnubhavColors.darkGreen : scoreColor(value));
 
         return SizedBox(
           width: size,
@@ -39,34 +41,42 @@ class ScoreGauge extends StatelessWidget {
                 painter: _GaugePainter(
                   progress: progress,
                   accentColor: color,
-                  trackColor: AnubhavColors.cardBorderSubtle,
+                  trackColor: AnubhavColors.darkGreen.withValues(alpha: 0.12),
                 ),
               ),
-              // Large numeral + label
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${value.round()}',
-                    style: AnubhavTextStyles.displayScore.copyWith(
-                      fontSize: size * 0.32,
-                      color: AnubhavColors.textPrimary,
-                    ),
-                  ),
-                  if (label.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        style: AnubhavTextStyles.bodySmall.copyWith(
-                          fontSize: size * 0.075,
-                          fontWeight: FontWeight.w600,
-                          color: AnubhavColors.textSecondary,
-                        ),
+              // Large numeral + label sitting comfortably inside the ring
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: size * 0.16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${value.round()}',
+                      style: AnubhavTextStyles.displayScore.copyWith(
+                        fontSize: size * 0.25,
+                        height: 1.0,
+                        color: AnubhavColors.textPrimary,
                       ),
                     ),
-                ],
+                    if (label.isNotEmpty) ...[
+                      SizedBox(height: size * 0.02),
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        softWrap: true,
+                        style: AnubhavTextStyles.bodySmall.copyWith(
+                          fontSize: (size * 0.058).clamp(8.5, 11.5),
+                          fontWeight: FontWeight.w700,
+                          color: AnubhavColors.textSecondary,
+                          height: 1.15,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),

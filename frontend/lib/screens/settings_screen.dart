@@ -22,18 +22,18 @@ class SettingsScreen extends StatelessWidget {
                 'Profile & Settings',
                 style: AnubhavTextStyles.headlineLarge,
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
 
               // ─── User Profile Card ───────────────────────────────────────────
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AnubhavColors.cardBg,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: AnubhavColors.cardBorder),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x081F5B5B),
+                      color: Color(0x147A1F1F),
                       blurRadius: 16,
                       offset: Offset(0, 4),
                     ),
@@ -71,7 +71,7 @@ class SettingsScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Preferred: 🇮🇳 Hindi (हिन्दी)',
+                            'Preferred: Hindi (हिन्दी)',
                             style: AnubhavTextStyles.bodySmall.copyWith(
                               color: AnubhavColors.teal,
                               fontWeight: FontWeight.w600,
@@ -95,7 +95,7 @@ class SettingsScreen extends StatelessWidget {
                 'VR Hardware & Devices',
                 style: AnubhavTextStyles.titleLarge,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               _buildSettingsCard([
                 _buildSettingsRow(
@@ -109,7 +109,7 @@ class SettingsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      'Ready 🟢',
+                      'Ready',
                       style: AnubhavTextStyles.bodySmall.copyWith(
                         color: AnubhavColors.positive,
                         fontWeight: FontWeight.w700,
@@ -132,7 +132,7 @@ class SettingsScreen extends StatelessWidget {
                 'Preferences & Feedback',
                 style: AnubhavTextStyles.titleLarge,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               _buildSettingsCard([
                 _buildSettingsRow(
@@ -167,7 +167,7 @@ class SettingsScreen extends StatelessWidget {
                 'Data & Ethics',
                 style: AnubhavTextStyles.titleLarge,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               _buildSettingsCard([
                 _buildSettingsRow(
@@ -190,7 +190,7 @@ class SettingsScreen extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AnubhavColors.negative,
                     side: const BorderSide(color: Color(0xFFFCDAD7)),
-                    backgroundColor: Colors.white,
+                    backgroundColor: AnubhavColors.cardBg,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(26),
                     ),
@@ -221,12 +221,12 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AnubhavColors.cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AnubhavColors.cardBorder),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x061F5B5B),
+            color: Color(0x0F7A1F1F),
             blurRadius: 12,
             offset: Offset(0, 3),
           ),

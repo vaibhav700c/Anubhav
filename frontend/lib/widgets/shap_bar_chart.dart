@@ -45,7 +45,8 @@ class _ShapBarChartState extends State<ShapBarChart> {
 
         // Normalize bar width relative to max contribution (capped at 15 pts)
         final barRatio = (feat.contribution.abs() / 15.0).clamp(0.1, 1.0);
-        final barColor = isPositive ? AnubhavColors.positive : AnubhavColors.negative;
+        // Positive = dark green (same as status ring), Negative = dark orange (same as font)
+        final barColor = isPositive ? AnubhavColors.darkGreen : AnubhavColors.orange;
 
         final signedDelta = isPositive
             ? '+${feat.contribution.toStringAsFixed(1)}'
@@ -92,7 +93,7 @@ class _ShapBarChartState extends State<ShapBarChart> {
                       children: [
                         Expanded(
                           child: Text(
-                            feat.feature,
+                            feat.displayName,
                             style: AnubhavTextStyles.titleMedium.copyWith(
                               color: AnubhavColors.textPrimary,
                               fontWeight: FontWeight.w700,
@@ -103,8 +104,8 @@ class _ShapBarChartState extends State<ShapBarChart> {
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: isPositive
-                                ? const Color(0xFFE6F7F0)
-                                : const Color(0xFFFDEEE9),
+                                ? AnubhavColors.darkGreen.withValues(alpha: 0.12)
+                                : AnubhavColors.orange.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -131,7 +132,7 @@ class _ShapBarChartState extends State<ShapBarChart> {
                         Container(
                           height: 8,
                           decoration: BoxDecoration(
-                            color: AnubhavColors.cardBorderSubtle,
+                            color: AnubhavColors.teal.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),

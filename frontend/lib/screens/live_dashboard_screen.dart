@@ -101,7 +101,11 @@ class _LiveDashboardScreenState extends State<LiveDashboardScreen> with SingleTi
                             ),
                             child: Column(
                               children: [
-                                ScoreGauge(score: provider.score, size: 180),
+                                ScoreGauge(
+                                  score: provider.score,
+                                  size: 180,
+                                  ringColor: AnubhavColors.darkGreen,
+                                ),
                                 const SizedBox(height: 16),
                                 EmotionBadge(emotion: provider.emotionLabel, fontSize: 14),
                               ],
@@ -194,7 +198,6 @@ class _LiveHeader extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFFFDEEE9),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AnubhavColors.orange, width: 1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

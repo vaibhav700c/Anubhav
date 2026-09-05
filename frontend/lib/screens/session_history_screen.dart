@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/session_summary.dart';
 import '../providers/history_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/desi_decorations.dart';
 
 /// Session History Screen matching the approved visual mockups
 class SessionHistoryScreen extends StatefulWidget {
@@ -126,16 +127,18 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               child: RefreshIndicator(
                 color: AnubhavColors.teal,
                 onRefresh: () => historyProvider.fetchHistory(),
-                child: filtered.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final session = filtered[index];
-                          return _buildSessionCard(context, session, index);
-                        },
-                      ),
+                child: historyProvider.isLoading && sessions.isEmpty
+                    ? const MandalaLoadingScreen(message: 'Loading session history...')
+                    : filtered.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final session = filtered[index];
+                              return _buildSessionCard(context, session, index);
+                            },
+                          ),
               ),
             ),
           ],
@@ -184,7 +187,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     ];
     final topicTitle = topics[index % topics.length];
 
-    final languages = ['🇮🇳 हिन्दी', '🇮🇳 English', '🇮🇳 தமிழ்', '🇮🇳 తెలుగు'];
+    final languages = ['हिन्दी', 'English', 'தமிழ்', 'తెలుగు'];
     final langTag = languages[index % languages.length];
 
     return Container(

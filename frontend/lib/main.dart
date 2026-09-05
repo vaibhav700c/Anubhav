@@ -12,12 +12,12 @@ void main() {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Dark status bar for the dark theme.
+  // Maroon icons on the cream theme.
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: Color(0xFF161929),
-    systemNavigationBarIconBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Color(0xFFF5E6C8),
+    systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
   runApp(const AnubhavApp());

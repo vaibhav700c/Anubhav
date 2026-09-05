@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/twin_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/desi_decorations.dart';
 import '../widgets/twin_trend_chart.dart';
 
 /// Digital Twin Progress Screen ("Your Speaking Journey")
@@ -34,7 +35,7 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
       child: SafeArea(
         bottom: false,
         child: isLoading || twin == null
-            ? const Center(child: CircularProgressIndicator(color: AnubhavColors.teal))
+            ? const Center(child: MandalaLoadingScreen(message: 'Analyzing speech patterns...'))
             : SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                 child: Column(
@@ -94,11 +95,11 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
 
                     Row(
                       children: [
-                        _buildMilestoneCard('👑', '5-Day Streak', 'Consistent practice king'),
+                        _buildMilestoneCard(Icons.emoji_events_rounded, '5-Day Streak', 'Consistent practice king'),
                         const SizedBox(width: 10),
-                        _buildMilestoneCard('🥇', '80+ Score', 'Mastery band unlocked'),
+                        _buildMilestoneCard(Icons.workspace_premium_rounded, '80+ Score', 'Mastery band unlocked'),
                         const SizedBox(width: 10),
-                        _buildMilestoneCard('✏️', 'Pitch Pro', 'Pacing under 145 WPM'),
+                        _buildMilestoneCard(Icons.speed_rounded, 'Pitch Pro', 'Pacing under 145 WPM'),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -130,10 +131,10 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
                               height: 24,
                               child: Row(
                                 children: [
-                                  Expanded(flex: 55, child: Container(color: const Color(0xFF10B981))), // Confident
-                                  Expanded(flex: 25, child: Container(color: const Color(0xFF0284C7))), // Calm
-                                  Expanded(flex: 12, child: Container(color: const Color(0xFFF59E0B))), // Nervous
-                                  Expanded(flex: 8, child: Container(color: const Color(0xFFEA580C))), // Excited
+                                  Expanded(flex: 55, child: Container(color: AnubhavColors.darkGreen)), // Confident
+                                  Expanded(flex: 25, child: Container(color: AnubhavColors.teal)), // Calm (Royal Maroon)
+                                  Expanded(flex: 12, child: Container(color: const Color(0xFFD97706))), // Nervous (Warm Marigold)
+                                  Expanded(flex: 8, child: Container(color: AnubhavColors.orange)), // Excited (Burnt Orange)
                                 ],
                               ),
                             ),
@@ -142,10 +143,10 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _buildDistributionItem('🙂 Confident', '55%', const Color(0xFF10B981)),
-                              _buildDistributionItem('😌 Calm', '25%', const Color(0xFF0284C7)),
-                              _buildDistributionItem('😰 Nervous', '12%', const Color(0xFFF59E0B)),
-                              _buildDistributionItem('🤩 Excited', '8%', const Color(0xFFEA580C)),
+                              _buildDistributionItem('Confident', '55%', AnubhavColors.darkGreen),
+                              _buildDistributionItem('Calm', '25%', AnubhavColors.teal),
+                              _buildDistributionItem('Nervous', '12%', const Color(0xFFD97706)),
+                              _buildDistributionItem('Excited', '8%', AnubhavColors.orange),
                             ],
                           ),
                         ],
@@ -191,7 +192,7 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
     );
   }
 
-  Widget _buildMilestoneCard(String icon, String title, String subtitle) {
+  Widget _buildMilestoneCard(IconData icon, String title, String subtitle) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -209,7 +210,7 @@ class _DigitalTwinScreenState extends State<DigitalTwinScreen> {
         ),
         child: Column(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 26)),
+            Icon(icon, size: 26, color: AnubhavColors.teal),
             const SizedBox(height: 8),
             Text(
               title,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_theme.dart';
+import 'desi_decorations.dart';
 
 /// Slim non-blocking connection status banner shown at the top of the
 /// Live Dashboard when the WebSocket is reconnecting or disconnected.
@@ -38,13 +39,10 @@ class ConnectionStatusBanner extends StatelessWidget {
           child: Row(
             children: [
               if (isReconnecting)
-                SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: color,
-                  ),
+                MandalaSpinner(
+                  size: 16,
+                  color: color,
+                  duration: const Duration(seconds: 3),
                 )
               else
                 Icon(icon, size: 16, color: color),
