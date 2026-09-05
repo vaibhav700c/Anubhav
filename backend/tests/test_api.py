@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.hub import hub
 
 client = TestClient(app)
 
@@ -91,3 +92,26 @@ def test_websocket_session():
         assert "score" in data
         assert "emotion_label" in data
         assert "transcript_partial" in data
+
+
+def test_session_complete_with_active_hub_session():
+    """Finalizing a session that is still live in the hub must use the in-memory
+
+    artifacts (transcript, words, elapsed time) rather than the fallback branch.
+    """
+    session_id = "active_session_888"
+    active = hub.get_or_create_session(session_id, user_id="user_001")
+    active.transcripts.append("Basically, um, matlab our latency is solved.")
+    active.emotion_timeline.append({"time": 3.0, "emotion": "confident", "intensity": 0.8})
+
+    resp = client.post(
+        "/session/complete",
+        json={"session_id": session_id, "user_id": "user_001"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "completed"
+    assert "matlab" in data["session"]["transcript"]
+    assert len(data["session"]["emotion_timeline"]) > 0
+    # Completing the session evicts it from the live hub
+    assert session_id not in hub.active_sessions
