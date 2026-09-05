@@ -1,146 +1,178 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-
 import '../models/emotion_point.dart';
 import '../theme/app_theme.dart';
 
-/// Area/line chart of emotion over session time.
-///
-/// Y-axis = intensity (0.0–1.0). Each data point's dot is colored by
-/// its emotion category using the shared [emotionColors] map.
-class EmotionTimelineChart extends StatelessWidget {
-  final List<EmotionPoint> points;
+/// Interactive scrubbable emotion timeline ribbon with active tooltip and emoji row
+class EmotionTimelineChart extends StatefulWidget {
+  final List<EmotionPoint> timeline;
 
-  const EmotionTimelineChart({super.key, required this.points});
+  const EmotionTimelineChart({super.key, required this.timeline});
+
+  @override
+  State<EmotionTimelineChart> createState() => _EmotionTimelineChartState();
+}
+
+class _EmotionTimelineChartState extends State<EmotionTimelineChart> {
+  int? _selectedIndex;
 
   @override
   Widget build(BuildContext context) {
-    if (points.isEmpty) {
-      return const _EmptyChart();
+    if (widget.timeline.isEmpty) {
+      return Container(
+        height: 160,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AnubhavColors.cardBorder),
+        ),
+        child: Text(
+          'No emotion timeline recorded.',
+          style: AnubhavTextStyles.bodyMedium,
+        ),
+      );
     }
 
-    final spots =
-        points.map((p) => FlSpot(p.time, p.intensity)).toList();
+    final points = widget.timeline;
+    final selectedPoint = _selectedIndex != null && _selectedIndex! < points.length
+        ? points[_selectedIndex!]
+        : null;
 
-    return SizedBox(
-      height: 200,
-      child: LineChart(
-        LineChartData(
-          backgroundColor: Colors.transparent,
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: 0.25,
-            getDrawingHorizontalLine: (_) => const FlLine(
-              color: AnubhavColors.chartGrid,
-              strokeWidth: 1,
-            ),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AnubhavColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x081F5B5B),
+            blurRadius: 14,
+            offset: Offset(0, 4),
           ),
-          borderData: FlBorderData(show: false),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 0.5,
-                reservedSize: 36,
-                getTitlesWidget: (v, _) => Text(
-                  '${(v * 100).toInt()}%',
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Live Delivery Valence',
+                style: AnubhavTextStyles.titleMedium,
+              ),
+              if (selectedPoint != null) ...[
+                Builder(builder: (_) {
+                  final meta = getEmotionMeta(selectedPoint.emotion);
+                  final minutes = (selectedPoint.time ~/ 60).toString().padLeft(2, '0');
+                  final seconds = (selectedPoint.time % 60).toInt().toString().padLeft(2, '0');
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: meta.softBackground,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${meta.emoji} ${meta.label} ($minutes:$seconds)',
+                      style: AnubhavTextStyles.labelMedium.copyWith(
+                        color: meta.color,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  );
+                }),
+              ] else ...[
+                Text(
+                  'Tap segment to inspect',
                   style: AnubhavTextStyles.bodySmall,
                 ),
-              ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 30,
-                getTitlesWidget: (v, _) {
-                  final mins = (v / 60).floor();
-                  final secs = (v % 60).toInt();
-                  return Text(
-                    mins > 0 ? '${mins}m${secs}s' : '${secs}s',
-                    style: AnubhavTextStyles.bodySmall,
-                  );
-                },
-              ),
-            ),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ],
+            ],
           ),
-          minX: 0,
-          maxX: points.last.time,
-          minY: 0,
-          maxY: 1,
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              curveSmoothness: 0.35,
-              color: AnubhavColors.accent.withOpacity(0.8),
-              barWidth: 2.5,
-              dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, _, __, index) {
-                  final color = emotionColor(points[index].emotion);
-                  return FlDotCirclePainter(
-                    radius: 5,
-                    color: color,
-                    strokeWidth: 2,
-                    strokeColor: AnubhavColors.surface,
-                  );
-                },
-              ),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AnubhavColors.accent.withOpacity(0.25),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ],
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => AnubhavColors.surfaceVariant,
-              getTooltipItems: (spots) => spots.map((s) {
-                final p = points[s.spotIndex];
-                return LineTooltipItem(
-                  '${p.emotion[0].toUpperCase()}${p.emotion.substring(1)}\n',
-                  TextStyle(
-                    color: emotionColor(p.emotion),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: '${(p.intensity * 100).toInt()}% intensity',
-                      style: AnubhavTextStyles.bodySmall,
+          const SizedBox(height: 16),
+
+          // Horizontal segmented scrubbable ribbon
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              height: 48,
+              child: Row(
+                children: points.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final pt = entry.value;
+                  final meta = getEmotionMeta(pt.emotion);
+                  final isSelected = _selectedIndex == idx;
+
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedIndex = idx;
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 1),
+                        decoration: BoxDecoration(
+                          color: isSelected ? meta.color : meta.color.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(6),
+                          border: isSelected
+                              ? Border.all(color: AnubhavColors.textPrimary, width: 2)
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            meta.emoji,
+                            style: TextStyle(
+                              fontSize: isSelected ? 18 : 14,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: 14),
+
+          // Emoji reference key row mapped to the 6 fixed labels
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildLegendItem('Confident', '🙂', const Color(0xFF10B981)),
+                _buildLegendItem('Nervous', '😰', const Color(0xFFF59E0B)),
+                _buildLegendItem('Bored', '😴', const Color(0xFF64748B)),
+                _buildLegendItem('Excited', '🤩', const Color(0xFFEA580C)),
+                _buildLegendItem('Monotone', '😐', const Color(0xFF8B5CF6)),
+                _buildLegendItem('Calm', '😌', const Color(0xFF0284C7)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _EmptyChart extends StatelessWidget {
-  const _EmptyChart();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 200,
-      alignment: Alignment.center,
-      child: Text('No timeline data', style: AnubhavTextStyles.bodyMedium),
+  Widget _buildLegendItem(String label, String emoji, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 13)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AnubhavTextStyles.bodySmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

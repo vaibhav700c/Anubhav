@@ -17,6 +17,7 @@ class SessionDetail {
   final List<EmotionPoint> emotionTimeline;
   final List<ShapFeature> shapBreakdown;
   final String? transcript;
+  final String? coachingText;
 
   const SessionDetail({
     required this.sessionId,
@@ -25,6 +26,7 @@ class SessionDetail {
     required this.emotionTimeline,
     required this.shapBreakdown,
     this.transcript,
+    this.coachingText,
   });
 
   factory SessionDetail.fromJson(Map<String, dynamic> json) => SessionDetail(
@@ -42,6 +44,7 @@ class SessionDetail {
                 .toList() ??
             [],
         transcript: json['transcript'] as String?,
+        coachingText: json['coaching_text'] as String?,
       );
 
   Map<String, dynamic> toJson() => {

@@ -1,10 +1,7 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/session_provider.dart';
-import '../services/websocket_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connection_status_banner.dart';
 import '../widgets/emotion_badge.dart';
@@ -18,25 +15,24 @@ class LiveDashboardScreen extends StatefulWidget {
   State<LiveDashboardScreen> createState() => _LiveDashboardScreenState();
 }
 
-class _LiveDashboardScreenState extends State<LiveDashboardScreen>
-    with SingleTickerProviderStateMixin {
-  // Hardcoded session ID for demo; in production this would come from the
-  // VR headset handshake or a session-start API call.
+class _LiveDashboardScreenState extends State<LiveDashboardScreen> with SingleTickerProviderStateMixin {
   static const _demoSessionId = 'live_001';
 
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
-  StreamSubscription<bool>? _endedSub;
   bool _hasNavigatedAway = false;
 
   @override
   void initState() {
     super.initState();
     _pulseCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.8, end: 1.0).animate(
-        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _pulseAnim = Tween<double>(begin: 0.88, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SessionProvider>().startSession(_demoSessionId);
@@ -46,7 +42,6 @@ class _LiveDashboardScreenState extends State<LiveDashboardScreen>
   @override
   void dispose() {
     _pulseCtrl.dispose();
-    _endedSub?.cancel();
     super.dispose();
   }
 
@@ -54,10 +49,9 @@ class _LiveDashboardScreenState extends State<LiveDashboardScreen>
     if (_hasNavigatedAway) return;
     _hasNavigatedAway = true;
     final navigator = Navigator.of(context);
-    // Give a short delay so the API can finalize the report.
-    Future.delayed(const Duration(milliseconds: 800), () {
+    Future.delayed(const Duration(milliseconds: 600), () {
       if (mounted) {
-        navigator.pushNamed('/detail', arguments: _demoSessionId);
+        navigator.pushReplacementNamed('/detail', arguments: _demoSessionId);
       }
     });
   }
@@ -65,125 +59,164 @@ class _LiveDashboardScreenState extends State<LiveDashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AnubhavColors.background,
-      body: Consumer<SessionProvider>(
-        builder: (context, provider, _) {
-          // Watch for session end → navigate to detail
-          if (provider.sessionEnded && !_hasNavigatedAway) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _onSessionEnded(context);
-            });
-          }
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AnubhavGradients.coolBackground,
+        ),
+        child: Consumer<SessionProvider>(
+          builder: (context, provider, _) {
+            if (provider.sessionEnded && !_hasNavigatedAway) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _onSessionEnded(context);
+              });
+            }
 
-          return Column(
-            children: [
-              // Connection banner (non-blocking, slim)
-              ConnectionStatusBanner(state: provider.connectionState),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                  child: SafeArea(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 12),
-                        _LiveHeader(pulseAnim: _pulseAnim),
-                        const SizedBox(height: 32),
+            return Column(
+              children: [
+                ConnectionStatusBanner(state: provider.connectionState),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                    child: SafeArea(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _LiveHeader(pulseAnim: _pulseAnim),
+                          const SizedBox(height: 24),
 
-                        // ── Score gauge (most dominant element) ──────────────
-                        ScoreGauge(score: provider.score, size: 240),
-                        const SizedBox(height: 24),
-
-                        // ── Emotion badge ────────────────────────────────────
-                        EmotionBadge(
-                            emotion: provider.emotionLabel, fontSize: 15),
-                        const SizedBox(height: 32),
-
-                        // ── Stats row ────────────────────────────────────────
-                        _StatsRow(provider: provider),
-                        const SizedBox(height: 28),
-
-                        // ── Transcript feed ───────────────────────────────────
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Live Transcript',
-                              style: AnubhavTextStyles.titleMedium),
-                        ),
-                        const SizedBox(height: 12),
-                        TranscriptFeed(lines: provider.transcriptLines),
-                        const SizedBox(height: 28),
-
-                        // ── Session end button (for demo) ─────────────────────
-                        if (!provider.sessionEnded)
-                          _EndSessionButton(
-                            onEnd: () {
-                              provider.endSession();
-                            },
+                          // Score Gauge card
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: AnubhavColors.cardBorder),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x0A1F5B5B),
+                                  blurRadius: 18,
+                                  offset: Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                ScoreGauge(score: provider.score, size: 180),
+                                const SizedBox(height: 16),
+                                EmotionBadge(emotion: provider.emotionLabel, fontSize: 14),
+                              ],
+                            ),
                           ),
-                      ],
+                          const SizedBox(height: 20),
+
+                          // Live Metrics Stats row
+                          _StatsRow(provider: provider),
+                          const SizedBox(height: 24),
+
+                          // Live Transcript feed card
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Live Transcript Feed',
+                              style: AnubhavTextStyles.titleMedium,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AnubhavColors.cardBorder),
+                            ),
+                            padding: const EdgeInsets.all(16),
+                            child: TranscriptFeed(lines: provider.transcriptLines),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // End session button
+                          if (!provider.sessionEnded)
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  provider.endSession();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AnubhavColors.teal,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(27),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Finish Practice Session',
+                                  style: AnubhavTextStyles.labelLarge.copyWith(fontSize: 15),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 }
 
-// ─── Sub-widgets ──────────────────────────────────────────────────────────────
-
 class _LiveHeader extends StatelessWidget {
   final Animation<double> pulseAnim;
+
   const _LiveHeader({required this.pulseAnim});
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Live Session', style: AnubhavTextStyles.headlineLarge),
-            Text('Real-time coaching analysis',
-                style: AnubhavTextStyles.bodySmall),
+            Text('VR Live Companion', style: AnubhavTextStyles.headlineMedium),
+            Text('Streaming speech & emotion telemetry', style: AnubhavTextStyles.bodySmall),
           ],
         ),
-        const Spacer(),
         ScaleTransition(
           scale: pulseAnim,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AnubhavColors.error.withOpacity(0.15),
+              color: const Color(0xFFFDEEE9),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: AnubhavColors.error.withOpacity(0.5), width: 1),
+              border: Border.all(color: AnubhavColors.orange, width: 1),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   width: 8,
                   height: 8,
-                  decoration: BoxDecoration(
-                    color: AnubhavColors.error,
+                  decoration: const BoxDecoration(
+                    color: AnubhavColors.orange,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                          color: AnubhavColors.error.withOpacity(0.6),
-                          blurRadius: 6)
-                    ],
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Text('LIVE',
-                    style: TextStyle(
-                        color: AnubhavColors.error,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5)),
+                const Text(
+                  'LIVE',
+                  style: TextStyle(
+                    color: AnubhavColors.orange,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
               ],
             ),
           ),
@@ -195,109 +228,44 @@ class _LiveHeader extends StatelessWidget {
 
 class _StatsRow extends StatelessWidget {
   final SessionProvider provider;
+
   const _StatsRow({required this.provider});
 
   @override
   Widget build(BuildContext context) {
-    final lines = provider.transcriptLines.length;
-    final words = provider.transcriptLines
-        .join(' ')
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .length;
-
     return Row(
       children: [
-        _StatChip(
-          icon: Icons.format_list_numbered,
-          label: '$lines',
-          sublabel: 'utterances',
-          color: AnubhavColors.info,
-        ),
+        _buildStatCard('Speaking Pace', '142 WPM', Icons.speed_rounded, AnubhavColors.teal),
         const SizedBox(width: 12),
-        _StatChip(
-          icon: Icons.text_fields,
-          label: '$words',
-          sublabel: 'words spoken',
-          color: AnubhavColors.accent,
-        ),
+        _buildStatCard('Continuity', '94%', Icons.timeline_rounded, AnubhavColors.positive),
         const SizedBox(width: 12),
-        _StatChip(
-          icon: provider.connectionState == WsConnectionState.connected
-              ? Icons.wifi
-              : Icons.wifi_off,
-          label: provider.connectionState == WsConnectionState.connected
-              ? 'Online'
-              : 'Offline',
-          sublabel: 'connection',
-          color: provider.connectionState == WsConnectionState.connected
-              ? AnubhavColors.success
-              : AnubhavColors.error,
-        ),
+        _buildStatCard('Audience', '25 NPCs', Icons.groups_rounded, AnubhavColors.orange),
       ],
     );
   }
-}
 
-class _StatChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String sublabel;
-  final Color color;
-
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildStatCard(String title, String val, IconData icon, Color accent) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AnubhavColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AnubhavColors.cardBorder),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(height: 4),
-            Text(label,
-                style: TextStyle(
-                    color: color,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'Outfit')),
-            Text(sublabel, style: AnubhavTextStyles.bodySmall),
+            Icon(icon, size: 20, color: accent),
+            const SizedBox(height: 6),
+            Text(
+              val,
+              style: AnubhavTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              title,
+              style: AnubhavTextStyles.bodySmall.copyWith(fontSize: 10),
+            ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EndSessionButton extends StatelessWidget {
-  final VoidCallback onEnd;
-  const _EndSessionButton({required this.onEnd});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onEnd,
-        icon: const Icon(Icons.stop_circle_outlined),
-        label: const Text('End Session (Demo)'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AnubhavColors.error,
-          side: BorderSide(color: AnubhavColors.error.withOpacity(0.5)),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );

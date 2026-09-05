@@ -1,368 +1,344 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-
 import '../models/session_summary.dart';
 import '../providers/history_provider.dart';
 import '../theme/app_theme.dart';
 
-class SessionHistoryScreen extends StatelessWidget {
+/// Session History Screen matching the approved visual mockups
+class SessionHistoryScreen extends StatefulWidget {
   const SessionHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AnubhavColors.background,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Anubhav', style: AnubhavTextStyles.headlineMedium),
-            Text('Your coaching sessions',
-                style: AnubhavTextStyles.bodySmall
-                    .copyWith(color: AnubhavColors.textTertiary)),
-          ],
-        ),
-        toolbarHeight: 70,
-        actions: [
-          _ProfileAvatar(),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: Consumer<HistoryProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading && provider.sessions.isEmpty) {
-            return const _LoadingSkeleton();
-          }
-          if (provider.error != null && provider.sessions.isEmpty) {
-            return _ErrorState(onRetry: provider.fetchHistory);
-          }
-          return RefreshIndicator(
-            color: AnubhavColors.accent,
-            backgroundColor: AnubhavColors.surface,
-            onRefresh: provider.fetchHistory,
-            child: CustomScrollView(
-              slivers: [
-                if (provider.isOffline)
-                  const SliverToBoxAdapter(child: _OfflineBanner()),
-                if (provider.sessions.isEmpty)
-                  const SliverFillRemaining(child: _EmptyState())
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (ctx, i) => _SessionCard(
-                          session: provider.sessions[i],
-                          index: i,
-                        ),
-                        childCount: provider.sessions.length,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
+  State<SessionHistoryScreen> createState() => _SessionHistoryScreenState();
 }
 
-// ─── Profile avatar ──────────────────────────────────────────────────────────
-
-class _ProfileAvatar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [AnubhavColors.accent, AnubhavColors.accentLight],
-        ),
-        border: Border.all(color: AnubhavColors.cardBorder, width: 2),
-      ),
-      child: const Center(
-        child: Text('KT',
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w700)),
-      ),
-    );
-  }
-}
-
-// ─── Session card ─────────────────────────────────────────────────────────────
-
-class _SessionCard extends StatelessWidget {
-  final SessionSummary session;
-  final int index;
-
-  const _SessionCard({required this.session, required this.index});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = scoreColor(session.overallScore);
-    final dateStr = DateFormat('d MMM, h:mm a').format(session.date.toLocal());
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.pushNamed(
-          context,
-          '/detail',
-          arguments: session.sessionId,
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AnubhavColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AnubhavColors.cardBorder),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AnubhavColors.surface,
-                color.withOpacity(0.04),
-              ],
-            ),
-          ),
-          child: Row(
-            children: [
-              // Score circle
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color.withOpacity(0.12),
-                  border: Border.all(color: color.withOpacity(0.4), width: 2),
-                ),
-                child: Center(
-                  child: Text(
-                    '${session.overallScore}',
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: 'Outfit',
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Session #${index + 1}',
-                      style: AnubhavTextStyles.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.calendar_today_outlined,
-                            size: 12, color: AnubhavColors.textTertiary),
-                        const SizedBox(width: 4),
-                        Text(dateStr, style: AnubhavTextStyles.bodySmall),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    _ScoreBand(score: session.overallScore),
-                  ],
-                ),
-              ),
-              // Chevron
-              const Icon(Icons.chevron_right,
-                  color: AnubhavColors.textTertiary, size: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ScoreBand extends StatelessWidget {
-  final int score;
-  const _ScoreBand({required this.score});
-
-  @override
-  Widget build(BuildContext context) {
-    final String label;
-    if (score >= 80) {
-      label = '🔥 Excellent';
-    } else if (score >= 60) {
-      label = '⚡ Good';
-    } else {
-      label = '📈 Needs Work';
-    }
-    final color = scoreColor(score);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(label,
-          style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-    );
-  }
-}
-
-// ─── States ──────────────────────────────────────────────────────────────────
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: AnubhavColors.warning.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AnubhavColors.warning.withOpacity(0.3)),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.cloud_off, size: 16, color: AnubhavColors.warning),
-          SizedBox(width: 8),
-          Text('Showing offline data',
-              style: TextStyle(
-                  color: AnubhavColors.warning,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AnubhavColors.accent.withOpacity(0.1),
-              border: Border.all(
-                  color: AnubhavColors.accent.withOpacity(0.3), width: 2),
-            ),
-            child: const Icon(Icons.view_in_ar_outlined,
-                size: 44, color: AnubhavColors.accent),
-          ),
-          const SizedBox(height: 24),
-          Text('No sessions yet',
-              style: AnubhavTextStyles.headlineMedium),
-          const SizedBox(height: 8),
-          Text('Put on the headset to start your first\npublic speaking session.',
-              textAlign: TextAlign.center,
-              style: AnubhavTextStyles.bodyMedium),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final VoidCallback onRetry;
-  const _ErrorState({required this.onRetry});
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline,
-              color: AnubhavColors.error, size: 48),
-          const SizedBox(height: 16),
-          Text('Couldn\'t load sessions',
-              style: AnubhavTextStyles.titleMedium),
-          const SizedBox(height: 8),
-          Text('Check your connection and try again.',
-              style: AnubhavTextStyles.bodyMedium),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AnubhavColors.accent,
-              foregroundColor: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LoadingSkeleton extends StatefulWidget {
-  const _LoadingSkeleton();
-  @override
-  State<_LoadingSkeleton> createState() => _LoadingSkeletonState();
-}
-
-class _LoadingSkeletonState extends State<_LoadingSkeleton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _shimmer;
+class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
+  String _searchQuery = '';
+  String _selectedFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
-    _shimmer = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HistoryProvider>().fetchHistory();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _shimmer,
-      builder: (ctx, _) {
-        final opacity = 0.3 + _shimmer.value * 0.3;
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: 5,
-          itemBuilder: (_, i) => Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            height: 104,
-            decoration: BoxDecoration(
-              color: AnubhavColors.surface.withOpacity(opacity),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AnubhavColors.cardBorder),
+    final historyProvider = context.watch<HistoryProvider>();
+    final sessions = historyProvider.sessions;
+
+    final filtered = sessions.where((s) {
+      if (_searchQuery.isEmpty) return true;
+      return s.sessionId.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AnubhavGradients.warmBackground,
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // ─── Header: Avatar + Title ──────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Session History',
+                    style: AnubhavTextStyles.headlineLarge,
+                  ),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: AnubhavColors.tealSurface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'VG',
+                        style: TextStyle(
+                          color: AnubhavColors.teal,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+
+            // ─── Search Bar ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AnubhavColors.cardBorder),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: TextField(
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val;
+                    });
+                  },
+                  style: AnubhavTextStyles.bodyMedium,
+                  decoration: InputDecoration(
+                    icon: const Icon(Icons.search_rounded, color: AnubhavColors.textTertiary),
+                    hintText: 'Search past sessions or topics...',
+                    hintStyle: AnubhavTextStyles.bodyMedium.copyWith(color: AnubhavColors.textTertiary),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+
+            // ─── Filter Chips Row ────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip('All'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Date ▾'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Language ▾'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Topic ▾'),
+                  ],
+                ),
+              ),
+            ),
+
+            // ─── Sessions List ───────────────────────────────────────────────
+            Expanded(
+              child: RefreshIndicator(
+                color: AnubhavColors.teal,
+                onRefresh: () => historyProvider.fetchHistory(),
+                child: filtered.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final session = filtered[index];
+                          return _buildSessionCard(context, session, index);
+                        },
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
+  Widget _buildFilterChip(String label) {
+    final isSelected = _selectedFilter == label;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = label;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AnubhavColors.teal : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AnubhavColors.teal : AnubhavColors.cardBorder,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AnubhavTextStyles.bodySmall.copyWith(
+            color: isSelected ? Colors.white : AnubhavColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionCard(BuildContext context, SessionSummary session, int index) {
+    final formattedDate = DateFormat('MMM d, yyyy • h:mm a').format(session.date);
+
+    // Realistic demo topics mapped by index
+    final topics = [
+      'Job Interview Preparation',
+      'Tech Architecture Pitch',
+      'Conference Keynote Speech',
+      'Team Standup & Showcase',
+    ];
+    final topicTitle = topics[index % topics.length];
+
+    final languages = ['🇮🇳 हिन्दी', '🇮🇳 English', '🇮🇳 தமிழ்', '🇮🇳 తెలుగు'];
+    final langTag = languages[index % languages.length];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AnubhavColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x081F5B5B),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.pushNamed(context, '/detail', arguments: session.sessionId);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top row: Date & Language Tag + Circular Fluency Score Badge
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AnubhavColors.bgWarmPeach,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                langTag,
+                                style: AnubhavTextStyles.bodySmall.copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AnubhavColors.teal,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              formattedDate,
+                              style: AnubhavTextStyles.bodySmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          topicTitle,
+                          style: AnubhavTextStyles.titleLarge,
+                        ),
+                      ],
+                    ),
+
+                    // Circular Fluency Score Badge in Deep Teal
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        color: AnubhavColors.tealSurface,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AnubhavColors.teal.withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '${session.overallScore}',
+                            style: AnubhavTextStyles.titleLarge.copyWith(
+                              color: AnubhavColors.teal,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18,
+                              height: 1.1,
+                            ),
+                          ),
+                          Text(
+                            'FLUENCY',
+                            style: AnubhavTextStyles.bodySmall.copyWith(
+                              color: AnubhavColors.teal,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 8,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Inline sparkline trend icons + Summary line
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Score: ${session.overallScore} • Fluency • Good Pace',
+                      style: AnubhavTextStyles.bodySmall.copyWith(
+                        color: AnubhavColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Row(
+                      children: [
+                        Icon(Icons.insights_rounded, size: 16, color: AnubhavColors.teal),
+                        SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AnubhavColors.textTertiary),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.history_edu_rounded, size: 60, color: AnubhavColors.textTertiary),
+          const SizedBox(height: 16),
+          Text(
+            'No practice sessions yet',
+            style: AnubhavTextStyles.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Complete your first speech practice to see analytics here.',
+            style: AnubhavTextStyles.bodySmall,
+          ),
+        ],
+      ),
+    );
   }
 }

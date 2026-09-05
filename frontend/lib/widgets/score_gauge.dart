@@ -1,56 +1,74 @@
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Radial arc gauge — the most visually dominant element on the Live Dashboard.
-///
-/// Score animates smoothly via [TweenAnimationBuilder]. The arc fills
-/// clockwise from the bottom-left, colored by score band.
+/// Circular score gauge displaying large numeral and "Overall Fluency Score"
 class ScoreGauge extends StatelessWidget {
-  final double score;
+  final num score;
   final double size;
+  final String label;
+  final bool animate;
 
-  const ScoreGauge({super.key, required this.score, this.size = 220});
+  const ScoreGauge({
+    super.key,
+    required this.score,
+    this.size = 180,
+    this.label = 'Overall Fluency Score',
+    this.animate = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: score.clamp(0, 100)),
-      duration: const Duration(milliseconds: 800),
+      tween: Tween<double>(begin: 0, end: score.toDouble()),
+      duration: Duration(milliseconds: animate ? 900 : 0),
       curve: Curves.easeOutCubic,
-      builder: (context, animatedScore, _) {
+      builder: (context, value, _) {
+        final progress = (value / 100.0).clamp(0.0, 1.0);
+        final color = scoreColor(value);
+
         return SizedBox(
           width: size,
           height: size,
-          child: CustomPaint(
-            painter: _GaugePainter(animatedScore),
-            child: Center(
-              child: Column(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Circular progress track
+              CustomPaint(
+                size: Size(size, size),
+                painter: _GaugePainter(
+                  progress: progress,
+                  accentColor: color,
+                  trackColor: AnubhavColors.cardBorderSubtle,
+                ),
+              ),
+              // Large numeral + label
+              Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    animatedScore.toStringAsFixed(0),
-                    style: TextStyle(
-                      fontSize: size * 0.30,
-                      fontWeight: FontWeight.w800,
-                      color: scoreColor(animatedScore),
-                      letterSpacing: -2,
-                      fontFamily: 'Outfit',
+                    '${value.round()}',
+                    style: AnubhavTextStyles.displayScore.copyWith(
+                      fontSize: size * 0.32,
+                      color: AnubhavColors.textPrimary,
                     ),
                   ),
-                  Text(
-                    'SCORE',
-                    style: TextStyle(
-                      fontSize: size * 0.075,
-                      fontWeight: FontWeight.w600,
-                      color: AnubhavColors.textTertiary,
-                      letterSpacing: 3,
-                      fontFamily: 'Outfit',
+                  if (label.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: AnubhavTextStyles.bodySmall.copyWith(
+                          fontSize: size * 0.075,
+                          fontWeight: FontWeight.w600,
+                          color: AnubhavColors.textSecondary,
+                        ),
+                      ),
                     ),
-                  ),
                 ],
               ),
-            ),
+            ],
           ),
         );
       },
@@ -59,72 +77,55 @@ class ScoreGauge extends StatelessWidget {
 }
 
 class _GaugePainter extends CustomPainter {
-  final double score;
-  _GaugePainter(this.score);
+  final double progress;
+  final Color accentColor;
+  final Color trackColor;
 
-  static const _startAngle = 140.0 * pi / 180;
-  static const _sweepTotal = 260.0 * pi / 180;
-  static const _strokeWidth = 14.0;
+  _GaugePainter({
+    required this.progress,
+    required this.accentColor,
+    required this.trackColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final strokeWidth = size.width * 0.085;
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - _strokeWidth * 2) / 2;
-    final rect = Rect.fromCircle(center: center, radius: radius);
+    final radius = (size.width - strokeWidth) / 2;
 
-    // Track arc (background)
+    // Background track (full circle or 270 arc)
+    final bgPaint = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
     canvas.drawArc(
-      rect,
-      _startAngle,
-      _sweepTotal,
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      math.pi * 2,
       false,
-      Paint()
-        ..color = AnubhavColors.surfaceVariant
-        ..strokeWidth = _strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round,
+      bgPaint,
     );
 
-    // Value arc
-    final sweep = _sweepTotal * (score / 100);
-    final gradient = SweepGradient(
-      startAngle: _startAngle,
-      endAngle: _startAngle + _sweepTotal,
-      colors: [scoreColor(score).withOpacity(0.6), scoreColor(score)],
-      tileMode: TileMode.clamp,
-    );
+    // Active progress arc
+    final fgPaint = Paint()
+      ..color = accentColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
     canvas.drawArc(
-      rect,
-      _startAngle,
-      sweep,
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      math.pi * 2 * progress,
       false,
-      Paint()
-        ..shader = gradient.createShader(rect)
-        ..strokeWidth = _strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round,
+      fgPaint,
     );
-
-    // Glow dot at tip
-    if (score > 0) {
-      final tipAngle = _startAngle + sweep;
-      final tipX = center.dx + radius * cos(tipAngle);
-      final tipY = center.dy + radius * sin(tipAngle);
-      canvas.drawCircle(
-        Offset(tipX, tipY),
-        _strokeWidth / 2 + 2,
-        Paint()
-          ..color = scoreColor(score)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
-      );
-      canvas.drawCircle(
-        Offset(tipX, tipY),
-        _strokeWidth / 2,
-        Paint()..color = scoreColor(score),
-      );
-    }
   }
 
   @override
-  bool shouldRepaint(_GaugePainter old) => old.score != score;
+  bool shouldRepaint(covariant _GaugePainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.accentColor != accentColor;
+  }
 }

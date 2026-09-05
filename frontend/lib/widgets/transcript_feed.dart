@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Auto-scrolling transcript feed that fade-in each new line.
+/// Auto-scrolling transcript feed that fades in each new line.
 class TranscriptFeed extends StatefulWidget {
   final List<String> lines;
 
@@ -34,7 +34,6 @@ class _TranscriptFeedState extends State<TranscriptFeed> {
 
   @override
   Widget build(BuildContext context) {
-    // Sync key list length
     while (_lineKeys.length < widget.lines.length) {
       _lineKeys.add(GlobalKey<_FadeLineState>());
     }
@@ -42,8 +41,8 @@ class _TranscriptFeedState extends State<TranscriptFeed> {
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: AnubhavColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(12),
+        color: AnubhavColors.bgCream,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AnubhavColors.cardBorder),
       ),
       child: Column(
@@ -53,27 +52,30 @@ class _TranscriptFeedState extends State<TranscriptFeed> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
               children: [
-                const Icon(Icons.mic, size: 14, color: AnubhavColors.accent),
+                const Icon(Icons.mic, size: 16, color: AnubhavColors.teal),
                 const SizedBox(width: 6),
-                Text('Live Transcript',
-                    style: AnubhavTextStyles.labelLarge
-                        .copyWith(color: AnubhavColors.textSecondary)),
+                Text(
+                  'Live Transcript Feed',
+                  style: AnubhavTextStyles.titleMedium.copyWith(fontSize: 13),
+                ),
               ],
             ),
           ),
-          const Divider(height: 1, color: AnubhavColors.cardBorder),
+          const Divider(height: 1, color: AnubhavColors.divider),
           Expanded(
             child: widget.lines.isEmpty
                 ? const Center(
-                    child: Text('Waiting for speech...',
-                        style: TextStyle(
-                            color: AnubhavColors.textTertiary,
-                            fontStyle: FontStyle.italic)),
+                    child: Text(
+                      'Waiting for speech input...',
+                      style: TextStyle(
+                        color: AnubhavColors.textTertiary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   )
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: widget.lines.length,
                     itemBuilder: (ctx, i) => _FadeLine(
                       key: _lineKeys[i],
@@ -104,8 +106,7 @@ class _FadeLine extends StatefulWidget {
   State<_FadeLine> createState() => _FadeLineState();
 }
 
-class _FadeLineState extends State<_FadeLine>
-    with SingleTickerProviderStateMixin {
+class _FadeLineState extends State<_FadeLine> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _opacity;
 
@@ -113,7 +114,9 @@ class _FadeLineState extends State<_FadeLine>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
   }
@@ -123,14 +126,13 @@ class _FadeLineState extends State<_FadeLine>
     return FadeTransition(
       opacity: _opacity,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Text(
           widget.text,
           style: AnubhavTextStyles.bodyMedium.copyWith(
-            color: widget.isLatest
-                ? AnubhavColors.textPrimary
-                : AnubhavColors.textSecondary,
-            height: 1.5,
+            color: widget.isLatest ? AnubhavColors.textPrimary : AnubhavColors.textSecondary,
+            fontWeight: widget.isLatest ? FontWeight.w600 : FontWeight.w400,
+            height: 1.45,
           ),
         ),
       ),
