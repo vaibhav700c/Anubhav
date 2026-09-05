@@ -21,8 +21,10 @@ class Settings(BaseSettings):
     SARVAM_API_KEY: Optional[str] = None
     SARVAM_BASE_URL: str = "https://api.sarvam.ai"
 
-    # Hume AI
+    # Hume AI (both API Key AND Secret Key required for OAuth2 client-credentials token exchange)
     HUME_API_KEY: Optional[str] = None
+    HUME_SECRET_KEY: Optional[str] = None  # Used with API Key to obtain short-lived access tokens
+    HUME_TOKEN_URL: str = "https://api.hume.ai/oauth2-cc/token"
     HUME_EVI_WS_URL: str = "wss://api.hume.ai/v0/evi/chat"
 
     # Voice & Speech Scoring Weights (Sum to 1.0)

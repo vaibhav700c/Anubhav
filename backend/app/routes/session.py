@@ -142,6 +142,13 @@ async def complete_session(
         total_duration_sec=elapsed_sec,
     )
 
+    if request.topic:
+        features["topic"] = request.topic
+    if request.language:
+        features["language"] = request.language
+    if request.audience_size:
+        features["audience_size"] = request.audience_size
+
     # 4. Compute Speech Fluency Score & Vocal Arousal Index
     score_result = scoring_svc.compute_fluency_score(features)
     overall_score = score_result["overall_score"]
@@ -199,6 +206,11 @@ async def complete_session(
         )
         db.add(feedback_rec)
         db.commit()
+    else:
+        feedback_rec.shap_breakdown = shap_breakdown
+        feedback_rec.coaching_text = coaching_text
+        feedback_rec.emotion_timeline = emotion_timeline
+        db.commit()
 
     # 8. Update Digital Twin
     twin_svc.update_twin_after_session(user_id=user_id, session_score=overall_score, db=db)
@@ -218,6 +230,8 @@ async def complete_session(
         coaching_text=coaching_text,
         feature_vector=features,
         disclaimer=settings.DISCLAIMER,
+        topic=features.get("topic"),
+        language=features.get("language"),
     )
 
     return SessionCompleteResponse(
@@ -286,6 +300,7 @@ async def get_session_detail(
     emotion_timeline = feedback_rec.emotion_timeline if feedback_rec else []
     shap_breakdown = feedback_rec.shap_breakdown if feedback_rec else []
     coaching_text = feedback_rec.coaching_text if feedback_rec else ""
+    fv = session_rec.feature_vector or {}
 
     return SessionDetailSchema(
         session_id=session_rec.id,
@@ -298,4 +313,6 @@ async def get_session_detail(
         coaching_text=coaching_text,
         feature_vector=session_rec.feature_vector,
         disclaimer=settings.DISCLAIMER,
+        topic=fv.get("topic", "Speech Practice"),
+        language=fv.get("language", "English"),
     )

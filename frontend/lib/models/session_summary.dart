@@ -8,11 +8,15 @@ class SessionSummary {
   final String sessionId;
   final DateTime date;
   final int overallScore;
+  final String? topic;
+  final String? language;
 
   const SessionSummary({
     required this.sessionId,
     required this.date,
     required this.overallScore,
+    this.topic,
+    this.language,
   });
 
   factory SessionSummary.fromJson(Map<String, dynamic> json) => SessionSummary(
@@ -21,11 +25,15 @@ class SessionSummary {
             ? DateTime.tryParse(json['date'] as String) ?? DateTime.now()
             : DateTime.now(),
         overallScore: (json['overall_score'] as num?)?.toInt() ?? 0,
+        topic: json['topic'] as String?,
+        language: json['language'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
         'session_id': sessionId,
         'date': date.toIso8601String(),
         'overall_score': overallScore,
+        'topic': topic,
+        'language': language,
       };
 }
