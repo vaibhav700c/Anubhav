@@ -54,3 +54,7 @@ __pycache__/
 *.sqlite3
 .env
 
+
+# Node (docs tooling in scripts/)
+node_modules/
+npm-debug.log*

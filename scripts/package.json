@@ -1,0 +1,13 @@
+{
+  "name": "anubhav-docs-checks",
+  "private": true,
+  "type": "module",
+  "description": "Documentation checks for the Anubhav repository.",
+  "scripts": {
+    "check:diagrams": "node check-diagram-contrast.mjs"
+  },
+  "dependencies": {
+    "jsdom": "^25.0.0",
+    "mermaid": "^11.4.0"
+  }
+}

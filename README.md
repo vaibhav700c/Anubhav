@@ -641,6 +641,25 @@ cd backend && pytest tests/ -v          # 26 tests
 | `test_scoring_xai.py` | 3 | Fluency scoring, arousal baseline delta, SHAP output contract |
 | `test_digital_twin.py` | 3 | Empty history, single-session baseline, multi-session regression |
 
+### Documentation checks
+
+The Mermaid diagrams in this README are guarded by a contrast check. It renders
+every diagram through the real Mermaid engine, pairs each run of text with the
+fill actually painted behind it, and fails if anything drops below WCAG AA:
+
+```bash
+npm --prefix scripts install
+node scripts/check-diagram-contrast.mjs        # VERBOSE=1 to print every ratio
+```
+
+It exists because Mermaid has two colour paths with very different guarantees.
+`classDef` compiles to CSS carrying `!important`, so it survives the theme
+GitHub injects; theme variables alone do not — which is how an `erDiagram` once
+shipped with white attribute rows and invisible column names. The check also
+verifies that sequence-diagram message labels, which are drawn on the
+transparent canvas and inherit the reader's page colour, stay legible on
+GitHub's dark, dim **and** light themes.
+
 ---
 
 ## ✦ Roadmap
