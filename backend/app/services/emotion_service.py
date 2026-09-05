@@ -32,27 +32,85 @@ class EmotionService:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or settings.HUME_API_KEY
+        self.secret_key = settings.HUME_SECRET_KEY
+        self.token_url = settings.HUME_TOKEN_URL
         self.ws_url = settings.HUME_EVI_WS_URL
         self._quota_exhausted = False
         self._force_fallback = settings.MOCK_MODE or not bool(self.api_key)
+        self._access_token: Optional[str] = None  # Cached OAuth2 access token
+        self._token_expiry: float = 0.0  # Unix timestamp
+
+    # -------------------------------------------------------------------------
+    # Hume OAuth2 Client-Credentials Token Exchange
+    # -------------------------------------------------------------------------
+    async def _get_access_token(self) -> Optional[str]:
+        """Exchange API Key + Secret Key for a short-lived OAuth2 access token.
+
+        Hume EVI uses client-credentials flow:
+        POST https://api.hume.ai/oauth2-cc/token
+        Auth: Basic base64(api_key:secret_key)
+        Body: grant_type=client_credentials
+        Token is valid for 30 minutes; we refresh 2 minutes before expiry.
+        """
+        import time
+        import base64
+
+        if not self.api_key or not self.secret_key:
+            return None  # Fall back to API-key-only header method
+
+        # Return cached token if still valid (refresh 2 min before expiry)
+        if self._access_token and time.time() < self._token_expiry - 120:
+            return self._access_token
+
+        credentials = base64.b64encode(f"{self.api_key}:{self.secret_key}".encode()).decode()
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(
+                    self.token_url,
+                    headers={
+                        "Authorization": f"Basic {credentials}",
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    data="grant_type=client_credentials",
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    self._access_token = data.get("access_token")
+                    expires_in = data.get("expires_in", 1800)  # default 30 min
+                    self._token_expiry = time.time() + expires_in
+                    logger.info("Hume AI access token obtained successfully.")
+                    return self._access_token
+                else:
+                    logger.warning(f"Hume AI token exchange failed: {resp.status_code} {resp.text}")
+                    return None
+        except Exception as e:
+            logger.warning(f"Hume AI token exchange error: {e}")
+            return None
 
     # -------------------------------------------------------------------------
     # Primary: Hume AI EVI Sensing
     # -------------------------------------------------------------------------
     async def analyze_with_hume(self, audio_bytes: bytes) -> Optional[Dict[str, Any]]:
-        """Query Hume AI EVI with quota exhaustion defense."""
+        """Query Hume AI EVI. Uses OAuth2 token if both API key and Secret Key are set;
+        otherwise falls back to API-Key header only."""
         if self._force_fallback or self._quota_exhausted or not audio_bytes:
             return None
 
         try:
-            # Connect via HTTP or WebSocket with short timeout
-            headers = {"X-Hume-Api-Key": self.api_key or ""}
+            # Prefer OAuth2 access token; fall back to raw API key header
+            access_token = await self._get_access_token()
+            if access_token:
+                headers = {"Authorization": f"Bearer {access_token}"}
+            else:
+                headers = {"X-Hume-Api-Key": self.api_key or ""}
+
             url = "https://api.hume.ai/v0/evi/chat"
             async with httpx.AsyncClient(timeout=3.0) as client:
                 resp = await client.post(url, headers=headers, json={"audio": "stream"})
                 if resp.status_code in [401, 402, 429]:
                     logger.warning(f"Hume AI quota exhausted or rate limited ({resp.status_code}). Switching to fallback.")
                     self._quota_exhausted = True
+                    self._access_token = None  # Force token refresh on next call
                     return None
                 data = resp.json()
                 raw_scores = data.get("emotions", {})

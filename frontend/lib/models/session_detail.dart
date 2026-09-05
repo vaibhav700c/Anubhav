@@ -18,6 +18,9 @@ class SessionDetail {
   final List<ShapFeature> shapBreakdown;
   final String? transcript;
   final String? coachingText;
+  final String? topic;
+  final String? language;
+  final Map<String, dynamic>? featureVector;
 
   const SessionDetail({
     required this.sessionId,
@@ -27,6 +30,9 @@ class SessionDetail {
     required this.shapBreakdown,
     this.transcript,
     this.coachingText,
+    this.topic,
+    this.language,
+    this.featureVector,
   });
 
   factory SessionDetail.fromJson(Map<String, dynamic> json) => SessionDetail(
@@ -45,6 +51,9 @@ class SessionDetail {
             [],
         transcript: json['transcript'] as String?,
         coachingText: json['coaching_text'] as String?,
+        topic: json['topic'] as String?,
+        language: json['language'] as String?,
+        featureVector: json['feature_vector'] as Map<String, dynamic>?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -54,5 +63,9 @@ class SessionDetail {
         'emotion_timeline': emotionTimeline.map((e) => e.toJson()).toList(),
         'shap_breakdown': shapBreakdown.map((e) => e.toJson()).toList(),
         'transcript': transcript,
+        'coaching_text': coachingText,
+        'topic': topic,
+        'language': language,
+        'feature_vector': featureVector,
       };
 }

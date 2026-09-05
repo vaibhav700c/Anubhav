@@ -20,6 +20,8 @@ class SessionSummarySchema(BaseModel):
     session_id: str
     date: str
     overall_score: int
+    topic: Optional[str] = None
+    language: Optional[str] = None
 
 
 class SessionDetailSchema(BaseModel):
@@ -33,6 +35,8 @@ class SessionDetailSchema(BaseModel):
     coaching_text: Optional[str] = None
     feature_vector: Optional[Dict[str, Any]] = None
     disclaimer: Optional[str] = None
+    topic: Optional[str] = None
+    language: Optional[str] = None
 
 
 class LiveUpdateSchema(BaseModel):
@@ -48,6 +52,9 @@ class SessionCompleteRequest(BaseModel):
     session_id: str
     user_id: str
     final_transcript: Optional[str] = None
+    topic: Optional[str] = None
+    language: Optional[str] = None
+    audience_size: Optional[str] = None
 
 
 class SessionCompleteResponse(BaseModel):

@@ -27,11 +27,29 @@ def get_user_history(
     )
 
     if not sessions:
-        # Provide realistic mock history for instant demo compatibility
+        # Provide realistic initial history for instant demo compatibility
         return [
-            SessionSummarySchema(session_id="s001", date="2026-09-05T10:32:00Z", overall_score=74),
-            SessionSummarySchema(session_id="s002", date="2026-09-04T15:15:00Z", overall_score=68),
-            SessionSummarySchema(session_id="s003", date="2026-09-03T09:45:00Z", overall_score=61),
+            SessionSummarySchema(
+                session_id="s001",
+                date="2026-09-05T10:32:00Z",
+                overall_score=74,
+                topic="Job Interview Prep",
+                language="Hindi (हिन्दी)",
+            ),
+            SessionSummarySchema(
+                session_id="s002",
+                date="2026-09-04T15:15:00Z",
+                overall_score=68,
+                topic="Pitch Deck Practice",
+                language="English",
+            ),
+            SessionSummarySchema(
+                session_id="s003",
+                date="2026-09-03T09:45:00Z",
+                overall_score=61,
+                topic="Keynote Address",
+                language="Tamil (தமிழ்)",
+            ),
         ]
 
     return [
@@ -39,6 +57,8 @@ def get_user_history(
             session_id=s.id,
             date=s.date,
             overall_score=int(round(s.score)),
+            topic=(s.feature_vector or {}).get("topic", "Speech Practice"),
+            language=(s.feature_vector or {}).get("language", "English"),
         )
         for s in sessions
     ]
