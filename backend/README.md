@@ -9,39 +9,49 @@ Both the **Unity (VR headset)** client and **Flutter (Companion Mobile App)** cl
 
 ## Architecture Overview
 
-```
-                          ┌────────────────────────┐
-                          │   Unity (VR Headset)   │
-                          └──────────┬─────────────┘
-                                     │  WS /session/{id}?client_type=vr
-                                     ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                             FASTAPI HUB                                  │
-│                                                                          │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────────────┐  │
-│  │  SarvamService  │    │ MetricsService  │    │    EmotionService    │  │
-│  │  - Saaras STT   │    │ - Tier 1 Timing │    │ - Hume AI EVI (Pri)  │  │
-│  │  - 105B LLM     │    │ - Tier 2 Fluency│    │ - Prosody (Fallback) │  │
-│  │  - Bulbul TTS   │    │ - Tier 3 Acoustic│   │ - 6 Fixed Labels     │  │
-│  └─────────────────┘    └─────────────────┘    └──────────────────────┘  │
-│           │                      │                         │             │
-│           ▼                      ▼                         ▼             │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────────────┐  │
-│  │ ScoringService  │    │   XAIService    │    │  DigitalTwinService  │  │
-│  │ - Fluency Score │    │ - SHAP Explainer│    │ - Trend Regression   │  │
-│  │ - Vocal Arousal │    │ - Top 3 Factors │    │ - Session Projection │  │
-│  └─────────────────┘    └─────────────────┘    └──────────────────────┘  │
-│                                  │                                       │
-│                                  ▼                                       │
-│                          SQLAlchemy / SQLite                             │
-│                  (users, sessions, feedback, twin)                       │
-└──────────────────────────────────┬───────────────────────────────────────┘
-                                   │  WS /session/{id}?client_type=app
-                                   │  REST: /history, /session, /twin, etc.
-                                   ▼
-                          ┌────────────────────────┐
-                          │ Flutter Mobile Client  │
-                          └────────────────────────┘
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','primaryColor':'#EDE9FE','primaryTextColor':'#1E1B4B','primaryBorderColor':'#7C3AED','lineColor':'#7C3AED','clusterBkg':'#FAF8FF','clusterBorder':'#C4B5FD'}}}%%
+flowchart TB
+    VR["🎧 <b>Unity · Meta Quest 3</b><br/>WS /session/{id}?client_type=vr"]
+
+    subgraph HUB["⚡  FASTAPI BACKEND HUB"]
+        direction TB
+        WS["<b>WebSocketHub</b> · app/hub.py<br/>SessionState · fan-out · mock telemetry"]
+
+        subgraph P["Perception layer"]
+            direction LR
+            SARVAM["<b>SarvamService</b><br/>Saaras STT verbatim<br/>sarvam-105b coach<br/>Bulbul TTS"]
+            METRICS["<b>MetricsService</b><br/>T1 timing · T2 fluency<br/>T3 acoustics"]
+            EMO["<b>EmotionService</b><br/>Hume EVI primary<br/>prosody fallback"]
+        end
+
+        subgraph R["Reasoning layer"]
+            direction LR
+            SCORE["<b>ScoringService</b><br/>Fluency 0–100<br/>Vocal Arousal Δ"]
+            XAI["<b>XAIService</b><br/>SHAP TreeExplainer<br/>top-3 factors"]
+            TWIN["<b>DigitalTwinService</b><br/>trend regression<br/>projection"]
+        end
+
+        DB[("<b>SQLAlchemy</b><br/>users · sessions<br/>feedback · digital_twin")]
+    end
+
+    APP["📱 <b>Flutter Companion App</b><br/>WS /session/{id}?client_type=app<br/>REST /history /session /twin /explain /emotion"]
+
+    VR -- "audio · text chunks ▸" --> WS
+    WS -- "◂ coach_feedback + TTS bytes" --> VR
+    WS --> SARVAM --> METRICS --> EMO
+    EMO --> SCORE --> XAI --> TWIN --> DB
+    WS -- "live telemetry frames ▸" --> APP
+    APP -- "REST" --> HUB
+
+    classDef client fill:#DBEAFE,stroke:#3B82F6,stroke-width:2px,color:#0C2A5B
+    classDef svc fill:#EDE9FE,stroke:#7C3AED,stroke-width:2px,color:#2E1065
+    classDef store fill:#DCFCE7,stroke:#22C55E,stroke-width:2px,color:#052E16
+    classDef hubcore fill:#F5F3FF,stroke:#5B21B6,stroke-width:3px,color:#2E1065
+    class VR,APP client
+    class SARVAM,METRICS,EMO,SCORE,XAI,TWIN svc
+    class DB store
+    class WS hubcore
 ```
 
 ---
@@ -213,5 +223,5 @@ SHAP feature contribution breakdown for a given session.
 
 Run pytest across all service and API tests:
 ```bash
-backend/.venv/bin/pytest backend/tests/ -v
+pytest tests/ -v          # 26 tests
 ```
