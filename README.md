@@ -128,7 +128,7 @@ flowchart TB
 What actually happens between "you start talking" and "you see why your score moved".
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#241A47','primaryTextColor':'#EDE9FE','primaryBorderColor':'#A78BFA','lineColor':'#A78BFA','textColor':'#E2E8F0','actorBkg':'#241A47','actorBorder':'#A78BFA','actorTextColor':'#EDE9FE','actorLineColor':'#4C1D95','signalColor':'#C4B5FD','signalTextColor':'#E2E8F0','messageLine0':'#C4B5FD','messageLine1':'#C4B5FD','messageText':'#E2E8F0','labelBoxBkgColor':'#2E1065','labelBoxBorderColor':'#A78BFA','labelTextColor':'#EDE9FE','loopTextColor':'#E2E8F0','sequenceNumberColor':'#0D0F1A','activationBkgColor':'#4C1D95','activationBorderColor':'#C4B5FD','noteBkgColor':'#3A2A0A','noteBorderColor':'#FBBF24','noteTextColor':'#FEF3C7'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#241A47','primaryTextColor':'#EDE9FE','primaryBorderColor':'#A78BFA','lineColor':'#A78BFA','textColor':'#E2E8F0','actorBkg':'#241A47','actorBorder':'#A78BFA','actorTextColor':'#EDE9FE','actorLineColor':'#4C1D95','signalColor':'#C4B5FD','signalTextColor':'#707EC2','messageLine0':'#C4B5FD','messageLine1':'#C4B5FD','messageText':'#707EC2','labelBoxBkgColor':'#2E1065','labelBoxBorderColor':'#A78BFA','labelTextColor':'#EDE9FE','loopTextColor':'#707EC2','sequenceNumberColor':'#0D0F1A','activationBkgColor':'#4C1D95','activationBorderColor':'#C4B5FD','noteBkgColor':'#3A2A0A','noteBorderColor':'#FBBF24','noteTextColor':'#FEF3C7'}}}%%
 sequenceDiagram
     autonumber
     participant VR as 🎧 Unity VR
@@ -321,43 +321,29 @@ The top 3 by absolute impact are turned into plain sentences:
 ## ✦ Data Model
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#241A47','primaryBorderColor':'#A78BFA','primaryTextColor':'#EDE9FE','lineColor':'#A78BFA','textColor':'#E2E8F0','mainBkg':'#241A47','nodeBorder':'#A78BFA','attributeBackgroundColorOdd':'#1E2235','attributeBackgroundColorEven':'#161929'}}}%%
-erDiagram
-    USERS ||--o{ SESSIONS : "practises"
-    USERS ||--o| DIGITAL_TWIN : "is modelled by"
-    SESSIONS ||--o| FEEDBACK : "produces"
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Inter, system-ui, sans-serif','background':'#0D1117','primaryColor':'#1E2235','primaryTextColor':'#E2E8F0','primaryBorderColor':'#A78BFA','lineColor':'#A78BFA','textColor':'#E2E8F0','mainBkg':'#1E2235','nodeBorder':'#A78BFA','clusterBkg':'#14172A','clusterBorder':'#4C1D95','edgeLabelBackground':'#161929'}}}%%
+flowchart TB
+    USERS["<b>users</b> · the speaker<br/>──────────────────────<br/><b>id</b> · string · PK<br/>name · string<br/>preferred_language · string · en-IN<br/>baseline_arousal · float · personal reference<br/>created_at · datetime"]
 
-    USERS {
-        string id PK
-        string name
-        string preferred_language "default en-IN"
-        float  baseline_arousal "personal reference"
-        datetime created_at
-    }
-    SESSIONS {
-        string id PK
-        string user_id FK
-        text   transcript "verbatim"
-        json   feature_vector "all 3 tiers"
-        float  score "fluency 0-100"
-        string date "ISO 8601"
-        datetime created_at
-    }
-    FEEDBACK {
-        int    id PK
-        string session_id FK
-        json   shap_breakdown "feature/contribution/explanation"
-        text   coaching_text "Sarvam 105B"
-        json   emotion_timeline "time/emotion/intensity"
-        datetime created_at
-    }
-    DIGITAL_TWIN {
-        int    id PK
-        string user_id FK
-        json   history_summary "session_index/score"
-        float  next_session_projection
-        datetime updated_at
-    }
+    SESSIONS["<b>sessions</b> · one practice run<br/>──────────────────────<br/><b>id</b> · string · PK<br/>user_id · string · FK → users<br/>transcript · text · verbatim<br/>feature_vector · json · all three tiers<br/>score · float · fluency 0–100<br/>date · string · ISO 8601<br/>created_at · datetime"]
+
+    FEEDBACK["<b>feedback</b> · what we tell you<br/>──────────────────────<br/><b>id</b> · int · PK<br/>session_id · string · FK → sessions<br/>shap_breakdown · json · feature / contribution / explanation<br/>coaching_text · text · Sarvam-105B<br/>emotion_timeline · json · time / emotion / intensity<br/>created_at · datetime"]
+
+    TWIN["<b>digital_twin</b> · you, over time<br/>──────────────────────<br/><b>id</b> · int · PK<br/>user_id · string · FK → users<br/>history_summary · json · session_index / score<br/>next_session_projection · float<br/>updated_at · datetime"]
+
+    USERS -- "1 : N · practises" --> SESSIONS
+    USERS -- "1 : 1 · is modelled by" --> TWIN
+    SESSIONS -- "1 : 1 · produces" --> FEEDBACK
+
+    classDef tblUser fill:#12243F,stroke:#60A5FA,stroke-width:2px,color:#DBEAFE
+    classDef tblSession fill:#241A47,stroke:#A78BFA,stroke-width:2px,color:#EDE9FE
+    classDef tblFeedback fill:#0F2E1D,stroke:#4ADE80,stroke-width:2px,color:#DCFCE7
+    classDef tblTwin fill:#3A2A0A,stroke:#FBBF24,stroke-width:2px,color:#FDE68A
+
+    class USERS tblUser
+    class SESSIONS tblSession
+    class FEEDBACK tblFeedback
+    class TWIN tblTwin
 ```
 
 ---
