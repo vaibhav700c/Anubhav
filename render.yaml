@@ -24,8 +24,14 @@ services:
     healthCheckPath: /health
     envVars:
       - key: MOCK_MODE
-        value: "true"
+        value: "false"
       - key: ENVIRONMENT
         value: "production"
       - key: PYTHON_VERSION
         value: "3.11.9"
+      # SARVAM_API_KEY / HUME_API_KEY / HUME_SECRET_KEY are set as secret env
+      # vars directly in the Render dashboard (never committed here). Render
+      # Blueprint syncs re-assert every value listed in this file on deploy,
+      # which is exactly why MOCK_MODE was silently forcing itself back to
+      # "true" on every redeploy even after setting real keys in the
+      # dashboard - it's the source of truth now, not a placeholder.
