@@ -95,15 +95,37 @@ class SessionState:
         Once locked onto Hindi or English, leaving requires 3 consecutive
         detections of something else instead of the normal 2 - every real
         misdetection observed live has been genuine Hindi speech misread as
-        some other Indic language, never the other way round, so the extra
-        bar only makes it harder to wrongly leave hi-IN/en-IN, not to
-        correctly switch away from them when the speaker really does. A
-        correction back TO hi-IN/en-IN keeps the normal 2-in-a-row bar.
+        some other Indic language (Gujarati, Tamil, Kannada, Punjabi, Odia,
+        in different sessions), never the other way round, so the extra bar
+        only makes it harder to wrongly leave hi-IN/en-IN, not to correctly
+        switch away from them when the speaker really does. A correction
+        back TO hi-IN/en-IN keeps the normal 2-in-a-row bar.
+
+        The very first detection of a session is a special case: a non-
+        priority language still bootstraps as PENDING rather than committing
+        outright, and needs one more matching detection before it becomes
+        session.detected_language - otherwise a single misread first window
+        (observed live: Odia, immediately, on session start) locks in wrong
+        before there's anything to debounce against at all. Hindi/English
+        still bootstrap immediately, since those are the two actually being
+        used - effective_language falls back to en-IN while nothing is
+        confirmed yet, so a session isn't left without a language mid-lock.
         """
         if self.detected_language is None:
-            self.detected_language = detected
-            self._pending_language = None
-            self._pending_language_count = 0
+            if detected in _PRIORITY_LANGUAGES:
+                self.detected_language = detected
+                self._pending_language = None
+                self._pending_language_count = 0
+                return
+            if detected == self._pending_language:
+                self._pending_language_count += 1
+            else:
+                self._pending_language = detected
+                self._pending_language_count = 1
+            if self._pending_language_count >= 2:
+                self.detected_language = detected
+                self._pending_language = None
+                self._pending_language_count = 0
             return
         if detected == self.detected_language:
             self._pending_language = None
