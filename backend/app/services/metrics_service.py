@@ -4,7 +4,6 @@ Tier 2: Fluency (Filler words, repetitions, self-corrections, false starts)
 Tier 3: Acoustic (Pitch f0, RMS loudness, jitter, shimmer via parselmouth/librosa)
 """
 
-import io
 import re
 import math
 import logging
@@ -12,6 +11,16 @@ from typing import Dict, Any, List, Optional
 import numpy as np
 
 logger = logging.getLogger("metrics_service")
+
+
+def _pcm16_bytes_to_float_array(audio_bytes: bytes) -> np.ndarray:
+    """Decodes raw 16-bit little-endian PCM (Unity's HubClient wire format)
+    into a float64 array in [-1, 1], as both parselmouth.Sound(values=...)
+    and plain RMS/arousal math expect."""
+    if len(audio_bytes) % 2:
+        audio_bytes = audio_bytes[:-1]  # tolerate a truncated final byte from a partial frame
+    samples = np.frombuffer(audio_bytes, dtype="<i2").astype(np.float64)
+    return samples / 32768.0
 
 # Indian English & Hinglish filler words vocabulary
 COMMON_FILLERS = {
@@ -170,8 +179,15 @@ class MetricsService:
                 import parselmouth
                 from parselmouth.praat import call
 
-                # Create Sound object from in-memory WAV bytes
-                sound = parselmouth.Sound(audio_bytes)
+                # audio_bytes is raw headerless PCM16 mono @ 16kHz (that's
+                # exactly what Unity's HubClient streams over the WebSocket -
+                # it is not a WAV/file blob). parselmouth.Sound() has no
+                # constructor overload for raw bytes; the correct one here is
+                # (values: ndarray, sampling_frequency) - previously this
+                # passed audio_bytes directly, which always raised inside the
+                # try/except and silently fell through to the fallback below.
+                samples = _pcm16_bytes_to_float_array(audio_bytes)
+                sound = parselmouth.Sound(values=samples, sampling_frequency=16000.0)
                 pitch = sound.to_pitch()
                 f0_values = pitch.selected_array["frequency"]
                 voiced_f0 = f0_values[f0_values > 0]
@@ -207,12 +223,11 @@ class MetricsService:
         except Exception as e:
             logger.warning(f"Parselmouth acoustic analysis error: {e}. Falling back to librosa/numpy.")
 
-        # Librosa or Numpy fallback
+        # Numpy fallback - same raw-PCM assumption as above; soundfile was
+        # never going to succeed here since audio_bytes has no container
+        # format for it to sniff.
         try:
-            import soundfile as sf
-            data, sr = sf.read(io.BytesIO(audio_bytes))
-            if len(data.shape) > 1:
-                data = data.mean(axis=1)
+            data = _pcm16_bytes_to_float_array(audio_bytes)
             rms = float(np.sqrt(np.mean(data**2)))
             arousal_raw = round(min(max(rms / 0.15, 0.1), 0.95), 3)
             return {

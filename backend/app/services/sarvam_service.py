@@ -5,11 +5,29 @@ Supports both real Sarvam HTTP/WS APIs and zero-dependency mock fallbacks.
 
 import asyncio
 import logging
+import struct
 from typing import AsyncGenerator, Dict, Any, List, Optional
 import httpx
 from app.config import settings
 
 logger = logging.getLogger("sarvam_service")
+
+
+def _pcm16_to_wav(pcm_bytes: bytes, sample_rate: int = 16000, channels: int = 1) -> bytes:
+    """Wraps raw 16-bit PCM (Unity's HubClient wire format) in a canonical
+    WAV/RIFF header. Sarvam's real STT endpoint needs a decodable audio
+    file - sending raw PCM mislabeled as .wav (the previous behavior) only
+    ever worked by accident against the mock path, which never actually
+    reads the bytes."""
+    block_align = channels * 2
+    byte_rate = sample_rate * block_align
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF", 36 + len(pcm_bytes), b"WAVE",
+        b"fmt ", 16, 1, channels, sample_rate, byte_rate, block_align, 16,
+        b"data", len(pcm_bytes),
+    )
+    return header + pcm_bytes
 
 
 def build_coaching_prompt(
@@ -96,7 +114,14 @@ class SarvamService:
             }
 
         url = f"{self.base_url}/speech-to-text"
-        files = {"file": ("chunk.wav", audio_bytes, "audio/wav")}
+        # Unity's HubClient sends raw headerless PCM16 (16 kHz mono) over the
+        # WebSocket - it is not actually a WAV file, despite the filename/
+        # content-type below. Sarvam's real STT endpoint expects a decodable
+        # audio file, so wrap it in a proper WAV container before sending;
+        # previously this sent raw PCM mislabeled as .wav, which a real
+        # server would reject or misparse (mock mode never touched these
+        # bytes, so this never surfaced against the mock).
+        files = {"file": ("chunk.wav", _pcm16_to_wav(audio_bytes), "audio/wav")}
         data = {
             "language_code": language_code,
             "model": "saaras:v1",
