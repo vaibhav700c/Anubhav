@@ -67,10 +67,19 @@ _SAFE_FALLBACK_COACHING_TEXT = "Keep your pace steady and cut filler words."
 _MAX_COACHING_TEXT_LEN = 220  # generous for a spoken "under 35 words" line
 
 
-def _clean_coaching_text(text: str) -> str:
+def _clean_coaching_text(text: str, finish_reason: Optional[str] = None) -> str:
     quoted = _QUOTED_SPAN_RE.findall(text)
     if quoted:
         candidate = max(quoted, key=len).strip()
+    elif finish_reason == "length":
+        # No complete (opened-and-closed) quote was found, and the response
+        # was cut off by the token budget rather than finishing naturally -
+        # observed live producing exactly this shape: a single-line fragment
+        # ('. My tip is pause placement before') that passes every other
+        # check (short, no newline, no marker phrase) purely because it got
+        # lucky about where the cutoff landed. Nothing here can be trusted
+        # to be a complete sentence, so don't bother inspecting it further.
+        return _SAFE_FALLBACK_COACHING_TEXT
     else:
         candidate = _WORD_COUNT_ARTIFACT_RE.sub("", text).strip().strip("\"'").strip()
 
@@ -78,7 +87,9 @@ def _clean_coaching_text(text: str) -> str:
     # checklist/enumeration/multi-paragraph-reasoning shape observed live so
     # far has, regardless of its exact wording. This is the general backstop
     # behind the specific marker list above, for whatever shape comes next.
-    if "\n" in candidate:
+    # Likewise, a real sentence never starts with closing punctuation - a
+    # reliable sign of a fragment sliced out of a longer, cut-off response.
+    if "\n" in candidate or (candidate and candidate[0] in ".,;:!?')]}"):
         return _SAFE_FALLBACK_COACHING_TEXT
 
     lowered = candidate.lower()
@@ -312,15 +323,17 @@ class SarvamService:
             response = await client.post(url, headers=self.headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            message = data["choices"][0]["message"]
+            choice = data["choices"][0]
+            message = choice["message"]
+            finish_reason = choice.get("finish_reason")
             content = message.get("content")
             if not content:
                 # Ran out of budget before emitting final content (or the
                 # API shape changes) - fall back to the tail of the
                 # reasoning trace rather than crashing on None.strip().
                 reasoning = message.get("reasoning_content") or ""
-                content = reasoning.strip()[-200:] or "Keep your pace steady and cut filler words."
-            return _clean_coaching_text(content)
+                content = reasoning.strip()[-200:] or _SAFE_FALLBACK_COACHING_TEXT
+            return _clean_coaching_text(content, finish_reason=finish_reason)
 
     # -------------------------------------------------------------------------
     # 3. TTS: Sarvam Bulbul (Emotion-Aware Voice Synthesis)
