@@ -30,14 +30,18 @@ logger = logging.getLogger("hub")
 # this also gives Sarvam STT several seconds of continuous speech per call
 # instead of 200ms fragments, which transcribes far more accurately.
 #
-# Raised from 3.5s to 9s specifically for language auto-detection quality -
-# live-tested at 3.5s, a single real Hindi session got misdetected as
-# Gujarati and then Tamil across different windows, flipping the coaching
-# language mid-conversation. Language ID is a lot more reliable with more
-# audio to work with; this trades faster live UI updates (score/transcript
-# now refresh every ~9s instead of ~3.5s) for a detection result that
-# should actually match the language the speaker is using.
-PIPELINE_WINDOW_SEC = 9.0
+# Was raised from 3.5s to 9s specifically to fix language-detection
+# accuracy (a single real session got misdetected as Gujarati, then Tamil,
+# across consecutive windows, flipping the coaching language mid-session).
+# That accuracy fix now lives in SessionState.update_detected_language
+# instead - a wrong detection needs 2-3 consecutive repeats before it's
+# ever trusted, regardless of window size - so the window itself no longer
+# has to be this wide just to protect detection. Lowered back down for a
+# more responsive live transcript/score (reported live as "vague" and
+# barely updating at 9s), while still giving Sarvam STT a few real seconds
+# of continuous speech per call rather than the 200ms raw chunks Unity
+# streams at.
+PIPELINE_WINDOW_SEC = 4.0
 
 # Hindi and English are the two languages actually in active use/testing
 # right now (explicit direction, after every real misdetection observed
