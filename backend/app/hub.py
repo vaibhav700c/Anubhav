@@ -384,7 +384,18 @@ class WebSocketHub:
         live_frame = {
             "score": session.current_score,
             "emotion_label": flutter_label,
-            "transcript_partial": transcript_text or full_transcript[-60:],
+            # The accumulated transcript so far, not just this window's raw
+            # ~9s fragment. This used to send only transcript_text, which
+            # made the VR live-transcript panel replace its text with a
+            # short, disconnected snippet on every update (and go visibly
+            # stale on any silent/noisy window, which never broadcasts at
+            # all - see the empty-transcript branch above) - reported live
+            # as the transcript looking "vague" and only really readable at
+            # the start and end of a session. Unity's UpdateLiveTranscript
+            # already trims to its own liveTranscriptMaxChars (160) showing
+            # the tail with "..." - sending more context here just gives it
+            # a coherent running view to trim from instead of one fragment.
+            "transcript_partial": full_transcript[-300:],
             "coaching_tip": "Keep steady cadence" if session.current_score > 70 else "Pause before next slide",
             "is_final": False,
             "disclaimer": settings.DISCLAIMER,
