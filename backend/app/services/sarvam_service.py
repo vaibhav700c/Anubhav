@@ -31,19 +31,38 @@ def _pcm16_to_wav(pcm_bytes: bytes, sample_rate: int = 16000, channels: int = 1)
     return header + pcm_bytes
 
 
-# sarvam-105b (a reasoning model) sometimes appends its own self-check
-# after the actual line, e.g.:
-#   "Insert a two-second silence after 'fine'..."
-#
-#   Word count: 1-Insert 2-a 3-two-second 4-silence ...
-# That block is scratch-work, never meant to be spoken/displayed - strip it,
-# along with the quote marks the model tends to wrap the real line in.
+# sarvam-105b (a reasoning model) sometimes wraps self-check scratch-work
+# around the actual line rather than answering cleanly - observed BOTH
+# orderings live: the real line first followed by "\n\nWord count: 1-Insert
+# 2-a ...", and separately a whole self-verification monologue first
+# ("okay? Yes.\nOne actionable vocal tip? \"...\" - yes.\n...") with the real
+# line last. In both cases the actual coaching line was the one wrapped in
+# quote marks, so extracting the longest quoted span is far more reliable
+# than assuming the scratch-work's position.
 _WORD_COUNT_ARTIFACT_RE = re.compile(r"\n+\s*word count\s*:.*", re.IGNORECASE | re.DOTALL)
+_QUOTED_SPAN_RE = re.compile(r"[\"“]([^\"“”]{8,400})[\"”]")
+
+# If the model burns its whole token budget on self-verification and never
+# produces a clean answer at all (observed live, finish_reason "length" with
+# a checklist mid-sentence), these markers show up in what's left. No
+# translated fallback exists for all 22 languages here, so this one English
+# line is an accepted, honest degradation rather than ever showing checklist
+# debris to a real speaker.
+_CHECKLIST_ARTIFACT_MARKERS = ("word count", "check)", "- yes.", "- no.", "guideline", "checklist")
+_SAFE_FALLBACK_COACHING_TEXT = "Keep your pace steady and cut filler words."
 
 
 def _clean_coaching_text(text: str) -> str:
-    text = _WORD_COUNT_ARTIFACT_RE.sub("", text)
-    return text.strip().strip("\"'").strip()
+    quoted = _QUOTED_SPAN_RE.findall(text)
+    if quoted:
+        candidate = max(quoted, key=len).strip()
+    else:
+        candidate = _WORD_COUNT_ARTIFACT_RE.sub("", text).strip().strip("\"'").strip()
+
+    lowered = candidate.lower()
+    if len(candidate) < 8 or any(marker in lowered for marker in _CHECKLIST_ARTIFACT_MARKERS):
+        return _SAFE_FALLBACK_COACHING_TEXT
+    return candidate
 
 
 # Sarvam's real API recognizes 22 official Indian languages plus English on
@@ -82,23 +101,26 @@ def build_coaching_prompt(
 
     language_name = SARVAM_LANGUAGE_NAMES.get(preferred_language, preferred_language)
 
+    # Written as flowing prose rather than a numbered checklist deliberately -
+    # sarvam-105b (a reasoning model) was observed live mirroring a numbered
+    # guideline list back as its own step-by-step self-verification
+    # ("No generic praise? Check.", echoing guideline 1 verbatim) instead of
+    # just answering, sometimes exhausting its whole token budget on that
+    # checklist before ever producing the actual line. Prose doesn't hand it
+    # a checklist shape to mirror.
     prompt = (
-        "You are Anubhav's expert speech coach for an Indian speaker in a VR simulation. "
-        "Analyze the speaker's live delivery with technical specificity.\n\n"
+        "You are Anubhav's expert speech coach for an Indian speaker in a VR simulation, "
+        "analyzing their live delivery with technical specificity.\n\n"
         f"Speaker's language (auto-detected from their live speech): {language_name} ({preferred_language})\n"
         f"Current Speech Fluency Score: {current_score:.1f}/100\n"
         f"Detected Emotional State: {emotion_label}\n"
         f"{history_context}\n"
         f"Speaker Verbatim Transcript:\n\"{transcript}\"\n\n"
-        "Guidelines for your coaching response:\n"
-        f"0. Respond entirely in {language_name} - the speaker used {language_name}, so your "
-        f"coaching line must be in {language_name} too, not English (unless {language_name} "
-        "already is English).\n"
-        "1. DO NOT give generic praise like 'Good job!' or 'You sound great!'.\n"
-        "2. Quote a specific phrase or moment from the transcript.\n"
-        "3. Provide exactly ONE actionable vocal tip (e.g., pace regulation, filler word reduction, or pause placement).\n"
-        "4. Tone: encouraging, sharp, and concise (under 35 words).\n"
-        "5. Output only the spoken coaching feedback in conversational voice."
+        f"Write one short coaching line, entirely in {language_name}, that quotes a specific "
+        "moment from the transcript above and gives exactly one concrete, actionable vocal tip "
+        "(pace, a filler word, or pause placement) growing out of that quote - not generic praise "
+        "like 'good job'. Keep it under 35 words, encouraging and sharp, phrased as something a "
+        "coach would actually say out loud."
     )
     return prompt
 
@@ -237,12 +259,14 @@ class SarvamService:
                     "role": "system",
                     "content": (
                         "You are a professional public speaking coach. This model "
-                        "reasons internally before answering - keep that reasoning "
-                        "brief. Respond with ONLY the final spoken coaching line: no "
-                        "preamble, no quotation marks around it, no meta-commentary, "
-                        "and never a word count or any other self-check afterward. "
-                        f"Write that line entirely in {language_name}, matching the "
-                        "speaker's own detected language - never default to English "
+                        "reasons internally before answering - do that reasoning "
+                        "silently and briefly, then commit to one answer without "
+                        "double-checking it against a checklist afterward. Your reply "
+                        'must contain exactly one double-quoted sentence - "like this" '
+                        "- which is the coaching line itself, and nothing else outside "
+                        "those quotes: no preamble, no self-verification, no word count. "
+                        f"Write that quoted line entirely in {language_name}, matching "
+                        "the speaker's own detected language - never default to English "
                         f"unless {language_name} is English."
                     ),
                 },
