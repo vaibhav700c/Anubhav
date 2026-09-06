@@ -189,18 +189,37 @@ async def complete_session(
     features["arousal_interpretation"] = interpretation
 
     # 5. XAI SHAP Explanation
-    xai_result = xai_svc.explain_delivery(features=features, score=overall_score)
-    shap_breakdown = xai_result["shap_breakdown"]
+    try:
+        xai_result = xai_svc.explain_delivery(features=features, score=overall_score)
+        shap_breakdown = xai_result["shap_breakdown"]
+    except Exception:
+        logger.exception(f"XAI explanation failed for session {session_id} - saving without it.")
+        shap_breakdown = []
 
     # 6. Sarvam-105B Coaching Feedback - same detected-language preference
     # as step 3 above, so the final report's coaching line matches the
     # language the speaker actually used, not a hardcoded en-IN default.
-    coaching_text = await sarvam_svc.generate_coaching(
-        transcript=transcript,
-        emotion_label=active.current_emotion if active else "Confident",
-        current_score=overall_score,
-        preferred_language=features.get("language", "en-IN"),
-    )
+    #
+    # This call was previously unguarded: a real 90s session produces a much
+    # longer transcript than any live per-window call ever sees, and a
+    # single Sarvam hiccup (timeout, transient 5xx) on that longer prompt
+    # raised straight out of this route - which, being unhandled, aborted
+    # the whole request with a 500 *before* the DB write below ever ran.
+    # Confirmed live: a real session's data was lost entirely this way,
+    # exactly matching "nothing shows up after a session" - the session
+    # was real, the crash just happened after all the real work and before
+    # the one line that actually saves it. Never let an external API call
+    # here cost you a session's worth of real data again.
+    try:
+        coaching_text = await sarvam_svc.generate_coaching(
+            transcript=transcript,
+            emotion_label=active.current_emotion if active else "Confident",
+            current_score=overall_score,
+            preferred_language=features.get("language", "en-IN"),
+        )
+    except Exception:
+        logger.exception(f"Coaching generation failed for session {session_id} - saving with a fallback line.")
+        coaching_text = "Keep your pace steady and cut filler words."
 
     # 7. Persist to DB
     iso_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
