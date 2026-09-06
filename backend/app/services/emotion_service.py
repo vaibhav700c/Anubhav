@@ -96,28 +96,21 @@ class EmotionService:
         if self._force_fallback or self._quota_exhausted or not audio_bytes:
             return None
 
-        try:
-            # Prefer OAuth2 access token; fall back to raw API key header
-            access_token = await self._get_access_token()
-            if access_token:
-                headers = {"Authorization": f"Bearer {access_token}"}
-            else:
-                headers = {"X-Hume-Api-Key": self.api_key or ""}
-
-            url = "https://api.hume.ai/v0/evi/chat"
-            async with httpx.AsyncClient(timeout=3.0) as client:
-                resp = await client.post(url, headers=headers, json={"audio": "stream"})
-                if resp.status_code in [401, 402, 429]:
-                    logger.warning(f"Hume AI quota exhausted or rate limited ({resp.status_code}). Switching to fallback.")
-                    self._quota_exhausted = True
-                    self._access_token = None  # Force token refresh on next call
-                    return None
-                data = resp.json()
-                raw_scores = data.get("emotions", {})
-                return self._map_hume_to_unified(raw_scores)
-        except Exception as e:
-            logger.warning(f"Hume AI connection issue: {e}. Degrading to local prosody fallback.")
-            return None
+        # Confirmed live: POST /v0/evi/chat always 404s - EVI's chat surface
+        # is a WebSocket session (connect, stream audio frames, receive
+        # emotion events over the socket), not a single-shot REST endpoint,
+        # so there is no request shape here that could ever succeed. Rather
+        # than burn a real network round-trip every pipeline window on a
+        # call that's guaranteed to fail, skip straight to the local
+        # fallback until EVI is wired up properly over its actual WS
+        # protocol - deliberately left as a stub rather than guessed at,
+        # since a wrong guess here would be worse than the honest fallback.
+        #
+        # The OAuth2 client-credentials exchange below (_get_access_token)
+        # is verified working against the real API - credentials are valid,
+        # it's only this REST call shape that's wrong - so it's left intact
+        # for whoever wires up the real EVI WebSocket flow next.
+        return None
 
     def _map_hume_to_unified(self, raw_emotions: Dict[str, float]) -> Dict[str, Any]:
         """Map Hume AI's 48-dimension emotion palette to our fixed 6-label vocabulary."""

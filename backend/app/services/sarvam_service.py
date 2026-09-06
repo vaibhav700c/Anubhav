@@ -178,26 +178,62 @@ class SarvamService:
             else:
                 return f"Strong delivery on '{transcript[:30]}...'. Keep your eye line forward and sustain this relaxed tone."
 
-        url = f"{self.base_url}/chat/completions"
+        # Confirmed directly against the real API: the chat endpoint lives
+        # under /v1 (unlike /speech-to-text and /text-to-speech, which sit
+        # at the bare root) - the previous {base_url}/chat/completions
+        # always 404'd, and since that call was never wrapped in a
+        # try/except anywhere up the call chain, raise_for_status() below
+        # took the whole WebSocket connection down with it on every attempt.
+        url = f"{self.base_url}/v1/chat/completions"
         payload = {
             "model": "sarvam-105b",
             "messages": [
-                {"role": "system", "content": "You are a professional public speaking coach."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a professional public speaking coach. This model "
+                        "reasons internally before answering - keep that reasoning "
+                        "brief and respond with ONLY the final spoken coaching line, "
+                        "no preamble, no meta-commentary about your reasoning."
+                    ),
+                },
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.5,
-            "max_tokens": 120,
+            # sarvam-105b is a reasoning model that spends completion tokens on
+            # an internal reasoning_content pass before emitting the final
+            # `content` field. Verified live: 120 tokens exhausts the budget
+            # mid-reasoning (finish_reason "length", content stays null) even
+            # for a ~15-word reply; a real reply completed at ~1571 tokens.
+            "max_tokens": 2500,
         }
 
-        async with httpx.AsyncClient(timeout=12.0) as client:
+        async with httpx.AsyncClient(timeout=25.0) as client:
             response = await client.post(url, headers=self.headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"].strip()
+            message = data["choices"][0]["message"]
+            content = message.get("content")
+            if not content:
+                # Ran out of budget before emitting final content (or the
+                # API shape changes) - fall back to the tail of the
+                # reasoning trace rather than crashing on None.strip().
+                reasoning = message.get("reasoning_content") or ""
+                content = reasoning.strip()[-200:] or "Keep your pace steady and cut filler words."
+            return content.strip()
 
     # -------------------------------------------------------------------------
     # 3. TTS: Sarvam Bulbul (Emotion-Aware Voice Synthesis)
     # -------------------------------------------------------------------------
+    # bulbul:v1 doesn't exist on the real API anymore (confirmed live - only
+    # v2/v3-beta/v3/v4 are accepted, and v2 is itself deprecated in favor of
+    # v3). Sarvam's speaker field also isn't a gender string - it's a named
+    # voice ID, and the valid names differ per model version. This maps the
+    # simple "male"/"female" callers already use to real bulbul:v3 voices,
+    # while still passing through an already-valid voice name unchanged.
+    _TTS_MODEL = "bulbul:v3"
+    _SPEAKER_MAP = {"female": "priya", "male": "rahul"}
+
     async def synthesize_speech(
         self,
         text: str,
@@ -232,12 +268,13 @@ class SarvamService:
             return wav_header + (b"\x00\x00" * num_samples)
 
         url = f"{self.base_url}/text-to-speech"
+        speaker = self._SPEAKER_MAP.get(speaker_gender, speaker_gender)
         payload = {
             "inputs": [text],
             "target_language_code": target_language_code,
-            "speaker": speaker_gender,
+            "speaker": speaker,
             "pace": pace,
-            "model": "bulbul:v1",
+            "model": self._TTS_MODEL,
         }
 
         async with httpx.AsyncClient(timeout=15.0) as client:
