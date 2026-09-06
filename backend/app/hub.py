@@ -29,7 +29,15 @@ logger = logging.getLogger("hub")
 # once per this many seconds, over whatever audio accumulated in between -
 # this also gives Sarvam STT several seconds of continuous speech per call
 # instead of 200ms fragments, which transcribes far more accurately.
-PIPELINE_WINDOW_SEC = 3.5
+#
+# Raised from 3.5s to 9s specifically for language auto-detection quality -
+# live-tested at 3.5s, a single real Hindi session got misdetected as
+# Gujarati and then Tamil across different windows, flipping the coaching
+# language mid-conversation. Language ID is a lot more reliable with more
+# audio to work with; this trades faster live UI updates (score/transcript
+# now refresh every ~9s instead of ~3.5s) for a detection result that
+# should actually match the language the speaker is using.
+PIPELINE_WINDOW_SEC = 9.0
 
 
 class SessionState:
@@ -61,6 +69,37 @@ class SessionState:
         # and TTS need one concrete language to answer/speak in.
         self.language: str = language
         self.detected_language: Optional[str] = language if language != "unknown" else None
+        # Debounce bookkeeping: a single noisy window can misdetect (observed
+        # live - real Hindi speech misread as Gujarati, then Tamil, across
+        # consecutive windows), so detected_language only actually changes
+        # once the SAME new language shows up twice in a row - see
+        # _update_detected_language. The very first detection of a session
+        # still commits immediately (nothing to debounce against yet).
+        self._pending_language: Optional[str] = None
+        self._pending_language_count: int = 0
+
+    def update_detected_language(self, detected: str) -> None:
+        """Commits a new STT-detected language only once it's been seen twice
+        in a row, so one noisy window can't flip the whole session's coaching
+        language by itself. Bootstraps immediately if nothing is set yet."""
+        if self.detected_language is None:
+            self.detected_language = detected
+            self._pending_language = None
+            self._pending_language_count = 0
+            return
+        if detected == self.detected_language:
+            self._pending_language = None
+            self._pending_language_count = 0
+            return
+        if detected == self._pending_language:
+            self._pending_language_count += 1
+        else:
+            self._pending_language = detected
+            self._pending_language_count = 1
+        if self._pending_language_count >= 2:
+            self.detected_language = detected
+            self._pending_language = None
+            self._pending_language_count = 0
 
 
 class WebSocketHub:
@@ -231,7 +270,7 @@ class WebSocketHub:
             transcript_text = stt_result.get("transcript", "")
             detected = stt_result.get("language_code")
             if detected and detected != "unknown":
-                session.detected_language = detected
+                session.update_detected_language(detected)
             for w in stt_result.get("words", []):
                 session.words.append(w)
 
