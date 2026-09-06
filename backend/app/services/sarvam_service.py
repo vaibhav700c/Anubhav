@@ -315,8 +315,14 @@ class SarvamService:
             # an internal reasoning_content pass before emitting the final
             # `content` field. Verified live: 120 tokens exhausts the budget
             # mid-reasoning (finish_reason "length", content stays null) even
-            # for a ~15-word reply; a real reply completed at ~1571 tokens.
-            "max_tokens": 2500,
+            # for a ~15-word reply; real replies have completed anywhere from
+            # ~1570 to ~2500 tokens depending on language and how much
+            # self-verification it decides to do. Raised further since
+            # finish_reason "length" (truncation) was the actual root cause
+            # behind most of the bad responses _clean_coaching_text guards
+            # against - fewer truncations means fewer times that guard needs
+            # to fall back instead of returning a real answer.
+            "max_tokens": 4000,
         }
 
         async with httpx.AsyncClient(timeout=25.0) as client:
