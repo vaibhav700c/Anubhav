@@ -43,22 +43,25 @@ _WORD_COUNT_ARTIFACT_RE = re.compile(
     r"\n+\s*(?:word count\s*:.*|\d+\s*words\.?\s*)", re.IGNORECASE | re.DOTALL
 )
 _QUOTED_SPAN_RE = re.compile(r"[\"“]([^\"“”]{8,400})[\"”]")
-# A run of 3+ "(1)"/"(2)"/"(3)"-style parenthesized numbers is the model
-# enumerating its own words for a self-count - never legitimate content in a
-# short spoken line, observed live in both English and Kannada replies.
-_ENUMERATION_MARKERS_RE = re.compile(r"(?:\(\d+\)\s*){3,}")
+# A run of 3+ "(1)"/"(2)"/"(3)" or "- 1" / "- 2" / "- 3"-style numbered
+# markers is the model enumerating its own words for a self-count under some
+# "Words:" or "Word count:" header - never legitimate content in a short
+# spoken line. Observed live in three different shapes across English,
+# Hindi, and Kannada replies, which is exactly why this matches the general
+# pattern rather than one exact phrasing.
+_ENUMERATION_MARKERS_RE = re.compile(r"(?:\(\d+\)\s*){3,}|(?:[-–]\s*\d+\s*\n){3,}")
 
 # If the model burns its whole token budget on self-verification and never
 # produces a clean answer at all (observed live, finish_reason "length" with
 # a checklist mid-sentence, in more shapes than any fixed list can name -
-# "Word count:", a bare "13 words.", "Alternatively, ...", a second attempt
-# started and cut off mid-word), these markers catch what's left. No
-# translated fallback exists for all 22 languages here, so this one English
-# line is an accepted, honest degradation rather than ever showing checklist
-# debris to a real speaker.
+# "Word count:", a bare "13 words.", a "Words:" header, "Alternatively, ...",
+# a second attempt started and cut off mid-word), these markers catch what's
+# left. No translated fallback exists for all 22 languages here, so this one
+# English line is an accepted, honest degradation rather than ever showing
+# checklist debris to a real speaker.
 _CHECKLIST_ARTIFACT_MARKERS = (
-    "word count", "check)", "- yes.", "- no.", "guideline", "checklist",
-    "alternatively", "this is very", "sharp and actionable",
+    "word count", "words:", "check)", "- yes.", "- no.", "guideline", "checklist",
+    "alternatively", "this is very", "sharp and actionable", "this is good",
 )
 _SAFE_FALLBACK_COACHING_TEXT = "Keep your pace steady and cut filler words."
 _MAX_COACHING_TEXT_LEN = 220  # generous for a spoken "under 35 words" line
@@ -70,6 +73,13 @@ def _clean_coaching_text(text: str) -> str:
         candidate = max(quoted, key=len).strip()
     else:
         candidate = _WORD_COUNT_ARTIFACT_RE.sub("", text).strip().strip("\"'").strip()
+
+    # A genuine single spoken sentence never contains a line break - every
+    # checklist/enumeration/multi-paragraph-reasoning shape observed live so
+    # far has, regardless of its exact wording. This is the general backstop
+    # behind the specific marker list above, for whatever shape comes next.
+    if "\n" in candidate:
+        return _SAFE_FALLBACK_COACHING_TEXT
 
     lowered = candidate.lower()
     if (
