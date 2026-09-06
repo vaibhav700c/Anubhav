@@ -5,6 +5,7 @@ Supports both real Sarvam HTTP/WS APIs and zero-dependency mock fallbacks.
 
 import asyncio
 import logging
+import re
 import struct
 from typing import AsyncGenerator, Dict, Any, List, Optional
 import httpx
@@ -28,6 +29,21 @@ def _pcm16_to_wav(pcm_bytes: bytes, sample_rate: int = 16000, channels: int = 1)
         b"data", len(pcm_bytes),
     )
     return header + pcm_bytes
+
+
+# sarvam-105b (a reasoning model) sometimes appends its own self-check
+# after the actual line, e.g.:
+#   "Insert a two-second silence after 'fine'..."
+#
+#   Word count: 1-Insert 2-a 3-two-second 4-silence ...
+# That block is scratch-work, never meant to be spoken/displayed - strip it,
+# along with the quote marks the model tends to wrap the real line in.
+_WORD_COUNT_ARTIFACT_RE = re.compile(r"\n+\s*word count\s*:.*", re.IGNORECASE | re.DOTALL)
+
+
+def _clean_coaching_text(text: str) -> str:
+    text = _WORD_COUNT_ARTIFACT_RE.sub("", text)
+    return text.strip().strip("\"'").strip()
 
 
 def build_coaching_prompt(
@@ -193,8 +209,9 @@ class SarvamService:
                     "content": (
                         "You are a professional public speaking coach. This model "
                         "reasons internally before answering - keep that reasoning "
-                        "brief and respond with ONLY the final spoken coaching line, "
-                        "no preamble, no meta-commentary about your reasoning."
+                        "brief. Respond with ONLY the final spoken coaching line: no "
+                        "preamble, no quotation marks around it, no meta-commentary, "
+                        "and never a word count or any other self-check afterward."
                     ),
                 },
                 {"role": "user", "content": prompt},
@@ -220,7 +237,7 @@ class SarvamService:
                 # reasoning trace rather than crashing on None.strip().
                 reasoning = message.get("reasoning_content") or ""
                 content = reasoning.strip()[-200:] or "Keep your pace steady and cut filler words."
-            return content.strip()
+            return _clean_coaching_text(content)
 
     # -------------------------------------------------------------------------
     # 3. TTS: Sarvam Bulbul (Emotion-Aware Voice Synthesis)
