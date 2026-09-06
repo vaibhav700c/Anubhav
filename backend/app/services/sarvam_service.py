@@ -124,7 +124,12 @@ class SarvamService:
         files = {"file": ("chunk.wav", _pcm16_to_wav(audio_bytes), "audio/wav")}
         data = {
             "language_code": language_code,
-            "model": "saaras:v1",
+            # "saaras:v1" doesn't exist on the real API anymore (confirmed
+            # directly against api.sarvam.ai - it 400s with the current valid
+            # list: saarika:v1/v2/v2.5/flash, saaras:v3/v3-realtime/v4/
+            # v4-multispk). v3 is the current non-realtime STT model, matching
+            # this endpoint's per-chunk file-upload (not WebSocket) shape.
+            "model": "saaras:v3",
             "mode": "verbatim" if verbatim else "clean",
         }
 
