@@ -298,8 +298,22 @@ async def get_session_detail(
     session_rec = db.query(SessionModel).filter(SessionModel.id == session_id).first()
 
     if not session_rec:
-        # Check if it's the mock session requested by Flutter
-        if session_id in ["s001", "live_001"] or settings.MOCK_MODE:
+        # Only fabricate a canned report when the whole backend is actually
+        # running in mock/offline mode. This used to ALSO trigger for the
+        # literal session ids "s001"/"live_001" even with MOCK_MODE=False -
+        # and live_001 is exactly the hardcoded id the Unity client connects
+        # with (see HubClient's default), so any time a real session under
+        # that id failed to reach the DB (e.g. /session/complete got
+        # cancelled by the app quitting before the request finished - seen
+        # live in the Unity console as "[HubClient] /session/complete
+        # request error: A task was canceled."), this endpoint silently
+        # served fake demo numbers (score 74, a canned English transcript
+        # about "our speech intelligence platform") back to the app in
+        # place of the real - or simply not-yet-available - result, with no
+        # error to indicate anything was wrong. That is what was actually
+        # producing "frontend shows just the hardcoded data": not a DB
+        # write bug, but this fallback masking a real one.
+        if settings.MOCK_MODE:
             return SessionDetailSchema(
                 session_id=session_id,
                 user_id="user_001",
@@ -339,7 +353,15 @@ async def get_session_detail(
                 ),
                 disclaimer=settings.DISCLAIMER,
             )
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Session '{session_id}' has no completed report yet - either "
+                "it's still in progress, or its final POST /session/complete "
+                "call never finished (a Sarvam hiccup, or the app quitting "
+                "before that request completed)."
+            ),
+        )
 
     feedback_rec = db.query(Feedback).filter(Feedback.session_id == session_id).first()
     emotion_timeline = feedback_rec.emotion_timeline if feedback_rec else []
