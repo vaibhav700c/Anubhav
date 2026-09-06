@@ -39,17 +39,29 @@ def _pcm16_to_wav(pcm_bytes: bytes, sample_rate: int = 16000, channels: int = 1)
 # line last. In both cases the actual coaching line was the one wrapped in
 # quote marks, so extracting the longest quoted span is far more reliable
 # than assuming the scratch-work's position.
-_WORD_COUNT_ARTIFACT_RE = re.compile(r"\n+\s*word count\s*:.*", re.IGNORECASE | re.DOTALL)
+_WORD_COUNT_ARTIFACT_RE = re.compile(
+    r"\n+\s*(?:word count\s*:.*|\d+\s*words\.?\s*)", re.IGNORECASE | re.DOTALL
+)
 _QUOTED_SPAN_RE = re.compile(r"[\"“]([^\"“”]{8,400})[\"”]")
+# A run of 3+ "(1)"/"(2)"/"(3)"-style parenthesized numbers is the model
+# enumerating its own words for a self-count - never legitimate content in a
+# short spoken line, observed live in both English and Kannada replies.
+_ENUMERATION_MARKERS_RE = re.compile(r"(?:\(\d+\)\s*){3,}")
 
 # If the model burns its whole token budget on self-verification and never
 # produces a clean answer at all (observed live, finish_reason "length" with
-# a checklist mid-sentence), these markers show up in what's left. No
+# a checklist mid-sentence, in more shapes than any fixed list can name -
+# "Word count:", a bare "13 words.", "Alternatively, ...", a second attempt
+# started and cut off mid-word), these markers catch what's left. No
 # translated fallback exists for all 22 languages here, so this one English
 # line is an accepted, honest degradation rather than ever showing checklist
 # debris to a real speaker.
-_CHECKLIST_ARTIFACT_MARKERS = ("word count", "check)", "- yes.", "- no.", "guideline", "checklist")
+_CHECKLIST_ARTIFACT_MARKERS = (
+    "word count", "check)", "- yes.", "- no.", "guideline", "checklist",
+    "alternatively", "this is very", "sharp and actionable",
+)
 _SAFE_FALLBACK_COACHING_TEXT = "Keep your pace steady and cut filler words."
+_MAX_COACHING_TEXT_LEN = 220  # generous for a spoken "under 35 words" line
 
 
 def _clean_coaching_text(text: str) -> str:
@@ -60,7 +72,12 @@ def _clean_coaching_text(text: str) -> str:
         candidate = _WORD_COUNT_ARTIFACT_RE.sub("", text).strip().strip("\"'").strip()
 
     lowered = candidate.lower()
-    if len(candidate) < 8 or any(marker in lowered for marker in _CHECKLIST_ARTIFACT_MARKERS):
+    if (
+        len(candidate) < 8
+        or len(candidate) > _MAX_COACHING_TEXT_LEN
+        or any(marker in lowered for marker in _CHECKLIST_ARTIFACT_MARKERS)
+        or _ENUMERATION_MARKERS_RE.search(candidate)
+    ):
         return _SAFE_FALLBACK_COACHING_TEXT
     return candidate
 
