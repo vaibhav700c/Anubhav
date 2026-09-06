@@ -4,15 +4,26 @@
 # by itself. To actually go live:
 #   1. Push this file to the repo (already done if you're reading it there).
 #   2. In the Render dashboard: New -> Blueprint -> connect this GitHub repo.
-#   3. Render reads this file and provisions the service below automatically.
+#   3. Render reads this file and provisions the service AND the database
+#      below automatically.
 #   4. Add SARVAM_API_KEY / HUME_API_KEY as secret env vars in the Render
 #      dashboard if/when you want real (non-mock) Sarvam/Hume calls - never
 #      commit them here.
 #
-# Note: the free tier's disk is ephemeral, so the SQLite database
-# (anubhav.db) resets on every deploy and on spin-down after idling. That's
-# fine for a demo; for anything persistent, switch DATABASE_URL to a
-# Render-managed Postgres instance instead.
+# DATABASE_URL now points at the managed Postgres instance declared below
+# instead of the free web service's own disk. That disk is ephemeral (wiped
+# on every deploy and on spin-down after idling) - real sessions were being
+# saved correctly and then erased by the very next redeploy, which is what
+# looked like "the DB never gets updated." Postgres survives both. Render's
+# free Postgres plan has its own limits/expiry (check the current terms in
+# your dashboard - they change over time) - upgrade the `plan` below if you
+# need it to persist past that.
+databases:
+  - name: anubhav-db
+    plan: free
+    databaseName: anubhav
+    user: anubhav
+
 services:
   - type: web
     name: anubhav-hub
@@ -29,6 +40,10 @@ services:
         value: "production"
       - key: PYTHON_VERSION
         value: "3.11.9"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: anubhav-db
+          property: connectionString
       # SARVAM_API_KEY / HUME_API_KEY / HUME_SECRET_KEY are set as secret env
       # vars directly in the Render dashboard (never committed here). Render
       # Blueprint syncs re-assert every value listed in this file on deploy,
