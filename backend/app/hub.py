@@ -39,6 +39,14 @@ logger = logging.getLogger("hub")
 # should actually match the language the speaker is using.
 PIPELINE_WINDOW_SEC = 9.0
 
+# Hindi and English are the two languages actually in active use/testing
+# right now (explicit direction, after every real misdetection observed
+# live this session ran the same direction: genuine Hindi speech getting
+# misread as some OTHER Indic language - Gujarati, then Tamil, then
+# Kannada, then Punjabi, in different sessions - never the reverse). See
+# SessionState.update_detected_language for how this is used.
+_PRIORITY_LANGUAGES = frozenset({"hi-IN", "en-IN"})
+
 
 class SessionState:
     """In-memory active state for an ongoing speech session."""
@@ -79,9 +87,19 @@ class SessionState:
         self._pending_language_count: int = 0
 
     def update_detected_language(self, detected: str) -> None:
-        """Commits a new STT-detected language only once it's been seen twice
-        in a row, so one noisy window can't flip the whole session's coaching
-        language by itself. Bootstraps immediately if nothing is set yet."""
+        """Commits a new STT-detected language only once it's been seen
+        enough times in a row, so one noisy window can't flip the whole
+        session's coaching language by itself. Bootstraps immediately if
+        nothing is set yet.
+
+        Once locked onto Hindi or English, leaving requires 3 consecutive
+        detections of something else instead of the normal 2 - every real
+        misdetection observed live has been genuine Hindi speech misread as
+        some other Indic language, never the other way round, so the extra
+        bar only makes it harder to wrongly leave hi-IN/en-IN, not to
+        correctly switch away from them when the speaker really does. A
+        correction back TO hi-IN/en-IN keeps the normal 2-in-a-row bar.
+        """
         if self.detected_language is None:
             self.detected_language = detected
             self._pending_language = None
@@ -96,7 +114,12 @@ class SessionState:
         else:
             self._pending_language = detected
             self._pending_language_count = 1
-        if self._pending_language_count >= 2:
+        required_streak = (
+            3
+            if self.detected_language in _PRIORITY_LANGUAGES and detected not in _PRIORITY_LANGUAGES
+            else 2
+        )
+        if self._pending_language_count >= required_streak:
             self.detected_language = detected
             self._pending_language = None
             self._pending_language_count = 0
@@ -254,6 +277,12 @@ class WebSocketHub:
         """Runs STT -> metrics -> scoring -> emotion -> LLM -> TTS once over
         a window of accumulated audio (or an already-complete text chunk)."""
         session = self.get_or_create_session(session_id)
+        pipeline_started = time.time()
+        audio_sec = len(combined_audio) / 32000 if combined_audio else 0.0
+        logger.info(
+            f"[{session_id}] pipeline window starting: "
+            f"{'transcript_override' if transcript_override else f'{audio_sec:.1f}s audio'}"
+        )
 
         # 1. Speech-to-text via Sarvam Saaras, over the whole window at once.
         # session.language is "unknown" unless a client asked for a specific
@@ -273,13 +302,25 @@ class WebSocketHub:
                 session.update_detected_language(detected)
             for w in stt_result.get("words", []):
                 session.words.append(w)
+            logger.info(
+                f"[{session_id}] STT result: raw_detected={detected!r} "
+                f"committed_language={session.detected_language!r} "
+                f"transcript={transcript_text[:80]!r}"
+            )
 
         if transcript_text.strip():
             session.transcripts.append(transcript_text)
-        elif combined_audio is not None:
-            # Silent window (nobody spoke in these ~3.5s) - nothing new to
-            # score or coach on, so skip the LLM/TTS round-trip entirely
-            # rather than generating feedback on an empty transcript.
+        else:
+            # Silent/inaudible window - nothing new to score or coach on. This
+            # used to return with NO log line at all, which is why a real VR
+            # session where every window came back empty (background noise,
+            # mic too quiet, distance from the headset) looked "stuck" with
+            # zero visibility into why - score/transcript/reactions never
+            # update because literally nothing gets sent for that window.
+            logger.info(
+                f"[{session_id}] empty transcript for this window ({audio_sec:.1f}s audio) "
+                "- skipping score/coaching update, nothing sent to client."
+            )
             return
 
         full_transcript = " ".join(session.transcripts)
@@ -312,6 +353,10 @@ class WebSocketHub:
             "emotion": flutter_label,
             "intensity": round(emotion_data["confidence"], 2),
         })
+        logger.info(
+            f"[{session_id}] score={session.current_score} emotion={flutter_label} "
+            f"(+{time.time() - pipeline_started:.1f}s so far)"
+        )
 
         # 5. Broadcast live telemetry frame to Flutter companion app
         live_frame = {
@@ -346,6 +391,11 @@ class WebSocketHub:
             "coaching_text": coaching_text,
         }
         await self.send_to_vr(session_id, vr_payload, audio_bytes=tts_audio)
+        logger.info(
+            f"[{session_id}] pipeline window done in {time.time() - pipeline_started:.1f}s total "
+            f"- sent coach_feedback (lang={effective_language}, "
+            f"vr_sockets={len(session.vr_sockets)}, app_sockets={len(session.app_sockets)})"
+        )
 
     async def _run_mock_telemetry(self, session_id: str):
         """Simulate realistic live WebSocket telemetry frames for Flutter app demos."""

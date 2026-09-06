@@ -7,6 +7,7 @@ import asyncio
 import logging
 import re
 import struct
+import time
 from typing import AsyncGenerator, Dict, Any, List, Optional
 import httpx
 from app.config import settings
@@ -237,11 +238,36 @@ class SarvamService:
             "mode": "verbatim" if verbatim else "clean",
         }
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            headers = {"api-subscription-key": self.api_key or ""}
-            response = await client.post(url, headers=headers, files=files, data=data)
-            response.raise_for_status()
-            return response.json()
+        # A 9-second real-audio window's WAV is ~280KB - uploading that plus
+        # Sarvam's own inference time can comfortably exceed the 10s this
+        # used to allow, especially from Render's free tier. Since a timeout
+        # here is silently swallowed by hub.py's per-window guard (nothing
+        # is sent back to the client at all - no score/transcript update,
+        # no coaching, no reaction - for that entire window), a live VR
+        # session under real network/inference variance could time out on
+        # every single window and just look permanently "stuck" with zero
+        # indication why. 25s gives real headroom; the surrounding pipeline
+        # already tolerates a slow window fine (see PIPELINE_WINDOW_SEC).
+        started = time.monotonic()
+        try:
+            async with httpx.AsyncClient(timeout=25.0) as client:
+                headers = {"api-subscription-key": self.api_key or ""}
+                response = await client.post(url, headers=headers, files=files, data=data)
+                response.raise_for_status()
+                result = response.json()
+        except Exception:
+            logger.exception(
+                f"Sarvam STT call failed after {time.monotonic() - started:.1f}s "
+                f"for a {len(audio_bytes)}-byte ({len(audio_bytes) / 32000:.1f}s) audio window - "
+                "this window's score/transcript/coaching update will be skipped entirely."
+            )
+            raise
+        logger.info(
+            f"Sarvam STT ok in {time.monotonic() - started:.1f}s: "
+            f"language={result.get('language_code')!r} "
+            f"transcript_len={len(result.get('transcript', '') or '')}"
+        )
+        return result
 
     async def transcribe_stream(
         self,
