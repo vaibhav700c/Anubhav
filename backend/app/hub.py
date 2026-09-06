@@ -19,6 +19,18 @@ from app.config import settings
 
 logger = logging.getLogger("hub")
 
+# Unity streams audio in ~200ms chunks (5/sec). Running the full STT ->
+# metrics -> emotion -> LLM -> TTS pipeline on every single chunk means up
+# to 5 chained round-trips per second to real external APIs, which the
+# receive loop can never keep up with - the socket falls behind and gets
+# killed mid-processing (observed live as the connection repeatedly
+# "closing without completing the close handshake" every few seconds, with
+# zero coach_feedback ever returned). Instead the pipeline runs at most
+# once per this many seconds, over whatever audio accumulated in between -
+# this also gives Sarvam STT several seconds of continuous speech per call
+# instead of 200ms fragments, which transcribes far more accurately.
+PIPELINE_WINDOW_SEC = 3.5
+
 
 class SessionState:
     """In-memory active state for an ongoing speech session."""
@@ -36,6 +48,10 @@ class SessionState:
         self.app_sockets: Set[WebSocket] = set()
         self.vr_sockets: Set[WebSocket] = set()
         self.mock_task: Optional[asyncio.Task] = None
+        # Windowed-pipeline bookkeeping (see PIPELINE_WINDOW_SEC above).
+        self.pending_audio: list[bytes] = []
+        self.last_pipeline_run: float = self.start_time
+        self.pipeline_running: bool = False
 
 
 class WebSocketHub:
@@ -117,22 +133,74 @@ class WebSocketHub:
         audio_chunk: Optional[bytes] = None,
         text_chunk: Optional[str] = None,
     ):
-        """Process incoming audio/speech chunk from VR headset."""
+        """Entry point for every incoming audio/speech frame from the VR
+        headset. Just buffers audio and returns immediately - the actual
+        pipeline is gated to run at most once per PIPELINE_WINDOW_SEC by
+        _maybe_run_pipeline, so the WebSocket receive loop this is called
+        from never blocks for multiple chained external-API round-trips.
+        """
         session = self.get_or_create_session(session_id)
         if session.mock_task and not session.mock_task.done():
             session.mock_task.cancel()
 
-        # 1. Speech-to-text via Sarvam Saaras
-        transcript_text = text_chunk or ""
+        if text_chunk:
+            # Text-chunk path (manual/simulated testing) is already a
+            # complete utterance - run it immediately, no windowing needed.
+            await self._run_pipeline(session_id, combined_audio=None, transcript_override=text_chunk)
+            return
+
         if audio_chunk:
             session.audio_chunks.append(audio_chunk)
-            stt_result = await self.sarvam.transcribe_audio_chunk(audio_chunk)
+            session.pending_audio.append(audio_chunk)
+
+        await self._maybe_run_pipeline(session_id)
+
+    async def _maybe_run_pipeline(self, session_id: str):
+        """Fires the heavy pipeline only if enough time has passed since the
+        last run and no run is already in flight - see PIPELINE_WINDOW_SEC."""
+        session = self.get_or_create_session(session_id)
+        now = time.time()
+        if (
+            session.pipeline_running
+            or not session.pending_audio
+            or (now - session.last_pipeline_run) < PIPELINE_WINDOW_SEC
+        ):
+            return
+
+        combined_audio = b"".join(session.pending_audio)
+        session.pending_audio = []
+        session.last_pipeline_run = now
+        session.pipeline_running = True
+        try:
+            await self._run_pipeline(session_id, combined_audio=combined_audio)
+        finally:
+            session.pipeline_running = False
+
+    async def _run_pipeline(
+        self,
+        session_id: str,
+        combined_audio: Optional[bytes],
+        transcript_override: Optional[str] = None,
+    ):
+        """Runs STT -> metrics -> scoring -> emotion -> LLM -> TTS once over
+        a window of accumulated audio (or an already-complete text chunk)."""
+        session = self.get_or_create_session(session_id)
+
+        # 1. Speech-to-text via Sarvam Saaras, over the whole window at once
+        transcript_text = transcript_override or ""
+        if combined_audio and not transcript_override:
+            stt_result = await self.sarvam.transcribe_audio_chunk(combined_audio)
             transcript_text = stt_result.get("transcript", "")
             for w in stt_result.get("words", []):
                 session.words.append(w)
 
-        if transcript_text:
+        if transcript_text.strip():
             session.transcripts.append(transcript_text)
+        elif combined_audio is not None:
+            # Silent window (nobody spoke in these ~3.5s) - nothing new to
+            # score or coach on, so skip the LLM/TTS round-trip entirely
+            # rather than generating feedback on an empty transcript.
+            return
 
         full_transcript = " ".join(session.transcripts)
 
@@ -141,7 +209,7 @@ class WebSocketHub:
         metrics_feats = self.metrics.extract_all_metrics(
             full_transcript,
             words=session.words,
-            audio_bytes=audio_chunk,
+            audio_bytes=combined_audio,
             total_duration_sec=elapsed_sec,
         )
 
@@ -151,7 +219,7 @@ class WebSocketHub:
 
         # 4. Emotion sensing
         emotion_data = await self.emotion_svc.get_emotion(
-            audio_bytes=audio_chunk,
+            audio_bytes=combined_audio,
             features=metrics_feats,
             transcript=full_transcript,
         )
