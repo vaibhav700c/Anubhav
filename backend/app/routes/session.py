@@ -49,13 +49,19 @@ async def session_websocket_endpoint(
     websocket: WebSocket,
     session_id: str,
     client_type: str = Query("app", description="Client type: 'app' (Flutter) or 'vr' (Unity)"),
+    language: str = Query(
+        "en-IN",
+        description="Sarvam language code for this session's live STT/LLM/TTS "
+        "(e.g. hi-IN, kn-IN, en-IN). Whichever client connects first sets it "
+        "for the whole session.",
+    ),
 ):
     """Dual-party WebSocket endpoint.
 
     - Flutter companion app connects as client_type=app (or default)
     - Unity VR headset connects as client_type=vr
     """
-    await hub.register(websocket, session_id, client_type=client_type)
+    await hub.register(websocket, session_id, client_type=client_type, language=language)
     try:
         while True:
             # Receive frames: can be JSON text, ping/pong, or raw audio bytes
@@ -154,7 +160,14 @@ async def complete_session(
 
     if request.topic:
         features["topic"] = request.topic
-    if request.language:
+    # Prefer what Sarvam STT actually detected live over whatever the client
+    # sent (a pre-session dropdown pick, or just its own hardcoded default) -
+    # the real session may not have matched that guess, especially now that
+    # the live pipeline auto-detects across all 22 supported languages.
+    detected = getattr(active, "detected_language", None) if active else None
+    if detected:
+        features["language"] = detected
+    elif request.language:
         features["language"] = request.language
     if request.audience_size:
         features["audience_size"] = request.audience_size
@@ -179,11 +192,14 @@ async def complete_session(
     xai_result = xai_svc.explain_delivery(features=features, score=overall_score)
     shap_breakdown = xai_result["shap_breakdown"]
 
-    # 6. Sarvam-105B Coaching Feedback
+    # 6. Sarvam-105B Coaching Feedback - same detected-language preference
+    # as step 3 above, so the final report's coaching line matches the
+    # language the speaker actually used, not a hardcoded en-IN default.
     coaching_text = await sarvam_svc.generate_coaching(
         transcript=transcript,
         emotion_label=active.current_emotion if active else "Confident",
         current_score=overall_score,
+        preferred_language=features.get("language", "en-IN"),
     )
 
     # 7. Persist to DB

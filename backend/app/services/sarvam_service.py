@@ -46,6 +46,21 @@ def _clean_coaching_text(text: str) -> str:
     return text.strip().strip("\"'").strip()
 
 
+# Sarvam's real API recognizes 22 official Indian languages plus English on
+# STT auto-detect (language_code: "unknown" - verified live). Named here so
+# the coaching prompt can tell the LLM which language to actually answer in
+# by name ("Hindi") rather than a bare code ("hi-IN"), which is what
+# reliably steers a general-purpose chat model's output language.
+SARVAM_LANGUAGE_NAMES: Dict[str, str] = {
+    "as-IN": "Assamese", "bn-IN": "Bengali", "brx-IN": "Bodo", "doi-IN": "Dogri",
+    "en-IN": "English", "gu-IN": "Gujarati", "hi-IN": "Hindi", "kn-IN": "Kannada",
+    "kok-IN": "Konkani", "ks-IN": "Kashmiri", "mai-IN": "Maithili", "ml-IN": "Malayalam",
+    "mni-IN": "Manipuri", "mr-IN": "Marathi", "ne-IN": "Nepali", "or-IN": "Odia",
+    "od-IN": "Odia", "pa-IN": "Punjabi", "sa-IN": "Sanskrit", "sat-IN": "Santali",
+    "sd-IN": "Sindhi", "ta-IN": "Tamil", "te-IN": "Telugu", "ur-IN": "Urdu",
+}
+
+
 def build_coaching_prompt(
     transcript: str,
     emotion_label: str,
@@ -65,15 +80,20 @@ def build_coaching_prompt(
         ]
         history_context = "Past Sessions Performance:\n" + "\n".join(history_lines) + "\n"
 
+    language_name = SARVAM_LANGUAGE_NAMES.get(preferred_language, preferred_language)
+
     prompt = (
         "You are Anubhav's expert speech coach for an Indian speaker in a VR simulation. "
         "Analyze the speaker's live delivery with technical specificity.\n\n"
-        f"Language: {preferred_language}\n"
+        f"Speaker's language (auto-detected from their live speech): {language_name} ({preferred_language})\n"
         f"Current Speech Fluency Score: {current_score:.1f}/100\n"
         f"Detected Emotional State: {emotion_label}\n"
         f"{history_context}\n"
         f"Speaker Verbatim Transcript:\n\"{transcript}\"\n\n"
         "Guidelines for your coaching response:\n"
+        f"0. Respond entirely in {language_name} - the speaker used {language_name}, so your "
+        f"coaching line must be in {language_name} too, not English (unless {language_name} "
+        "already is English).\n"
         "1. DO NOT give generic praise like 'Good job!' or 'You sound great!'.\n"
         "2. Quote a specific phrase or moment from the transcript.\n"
         "3. Provide exactly ONE actionable vocal tip (e.g., pace regulation, filler word reduction, or pause placement).\n"
@@ -101,7 +121,13 @@ class SarvamService:
     async def transcribe_audio_chunk(
         self,
         audio_bytes: bytes,
-        language_code: str = "en-IN",
+        # "unknown" triggers Sarvam's real language auto-detection across its
+        # 22 supported Indian languages plus English (verified live: fed its
+        # own Hindi/Kannada/English TTS output back through STT with
+        # language_code="unknown" and got the correct language_code back
+        # every time) - hardcoding en-IN here would silently force every
+        # session into English regardless of what the speaker actually used.
+        language_code: str = "unknown",
         verbatim: bool = True,
     ) -> Dict[str, Any]:
         """Transcribe an incoming chunk of audio using Sarvam Saaras.
@@ -120,7 +146,9 @@ class SarvamService:
             selected = random.choice(mock_segments)
             return {
                 "transcript": selected,
-                "language_code": language_code,
+                # Mock has no real audio to detect a language from - report
+                # en-IN rather than echoing back "unknown" verbatim.
+                "language_code": language_code if language_code != "unknown" else "en-IN",
                 "confidence": 0.94,
                 "words": [
                     {"word": w, "start_time": idx * 0.4, "end_time": (idx + 1) * 0.4}
@@ -200,6 +228,7 @@ class SarvamService:
         # always 404'd, and since that call was never wrapped in a
         # try/except anywhere up the call chain, raise_for_status() below
         # took the whole WebSocket connection down with it on every attempt.
+        language_name = SARVAM_LANGUAGE_NAMES.get(preferred_language, preferred_language)
         url = f"{self.base_url}/v1/chat/completions"
         payload = {
             "model": "sarvam-105b",
@@ -211,7 +240,10 @@ class SarvamService:
                         "reasons internally before answering - keep that reasoning "
                         "brief. Respond with ONLY the final spoken coaching line: no "
                         "preamble, no quotation marks around it, no meta-commentary, "
-                        "and never a word count or any other self-check afterward."
+                        "and never a word count or any other self-check afterward. "
+                        f"Write that line entirely in {language_name}, matching the "
+                        "speaker's own detected language - never default to English "
+                        f"unless {language_name} is English."
                     ),
                 },
                 {"role": "user", "content": prompt},

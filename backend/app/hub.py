@@ -35,7 +35,7 @@ PIPELINE_WINDOW_SEC = 3.5
 class SessionState:
     """In-memory active state for an ongoing speech session."""
 
-    def __init__(self, session_id: str, user_id: str = "user_001"):
+    def __init__(self, session_id: str, user_id: str = "user_001", language: str = "unknown"):
         self.session_id = session_id
         self.user_id = user_id
         self.start_time = time.time()
@@ -52,6 +52,15 @@ class SessionState:
         self.pending_audio: list[bytes] = []
         self.last_pipeline_run: float = self.start_time
         self.pipeline_running: bool = False
+        # "unknown" (the default) means auto-detect via Sarvam STT across its
+        # 22 supported Indian languages plus English - a client can still
+        # request a specific one (e.g. "hi-IN") to skip detection. Once real
+        # audio comes in, detected_language holds what STT actually
+        # identified, which is what the LLM/TTS calls use from then on -
+        # STT itself is fine being told "unknown" every time, but the LLM
+        # and TTS need one concrete language to answer/speak in.
+        self.language: str = language
+        self.detected_language: Optional[str] = language if language != "unknown" else None
 
 
 class WebSocketHub:
@@ -65,15 +74,19 @@ class WebSocketHub:
         self.emotion_svc = EmotionService()
         self.xai = XAIService()
 
-    def get_or_create_session(self, session_id: str, user_id: str = "user_001") -> SessionState:
+    def get_or_create_session(
+        self, session_id: str, user_id: str = "user_001", language: str = "unknown"
+    ) -> SessionState:
         if session_id not in self.active_sessions:
-            self.active_sessions[session_id] = SessionState(session_id, user_id)
+            self.active_sessions[session_id] = SessionState(session_id, user_id, language=language)
         return self.active_sessions[session_id]
 
-    async def register(self, websocket: WebSocket, session_id: str, client_type: str = "app"):
+    async def register(
+        self, websocket: WebSocket, session_id: str, client_type: str = "app", language: str = "unknown"
+    ):
         """Register a new WebSocket connection."""
         await websocket.accept()
-        session = self.get_or_create_session(session_id)
+        session = self.get_or_create_session(session_id, language=language)
 
         if client_type == "vr":
             session.vr_sockets.add(websocket)
@@ -203,11 +216,22 @@ class WebSocketHub:
         a window of accumulated audio (or an already-complete text chunk)."""
         session = self.get_or_create_session(session_id)
 
-        # 1. Speech-to-text via Sarvam Saaras, over the whole window at once
+        # 1. Speech-to-text via Sarvam Saaras, over the whole window at once.
+        # session.language is "unknown" unless a client asked for a specific
+        # one, which tells Sarvam to auto-detect - real STT responses carry
+        # back which of its 22 supported languages (+ English) it actually
+        # heard, which becomes session.detected_language for every step
+        # after this one (the LLM needs to answer in it, TTS needs to speak
+        # in it - neither can take "unknown" the way STT can).
         transcript_text = transcript_override or ""
         if combined_audio and not transcript_override:
-            stt_result = await self.sarvam.transcribe_audio_chunk(combined_audio)
+            stt_result = await self.sarvam.transcribe_audio_chunk(
+                combined_audio, language_code=session.language
+            )
             transcript_text = stt_result.get("transcript", "")
+            detected = stt_result.get("language_code")
+            if detected and detected != "unknown":
+                session.detected_language = detected
             for w in stt_result.get("words", []):
                 session.words.append(w)
 
@@ -261,13 +285,19 @@ class WebSocketHub:
         }
         await self.broadcast_to_app(session_id, live_frame)
 
-        # 6. Generate Coaching reply & TTS if appropriate
+        # 6. Generate Coaching reply & TTS if appropriate - both in whatever
+        # language STT actually detected (falls back to en-IN only if no
+        # speech has been successfully transcribed yet this session).
+        effective_language = session.detected_language or "en-IN"
         coaching_text = await self.sarvam.generate_coaching(
             transcript=transcript_text or full_transcript,
             emotion_label=session.current_emotion,
             current_score=session.current_score,
+            preferred_language=effective_language,
         )
-        tts_audio = await self.sarvam.synthesize_speech(coaching_text)
+        tts_audio = await self.sarvam.synthesize_speech(
+            coaching_text, target_language_code=effective_language
+        )
 
         # Reply to VR headset
         vr_payload = {

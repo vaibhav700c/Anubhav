@@ -11,17 +11,47 @@ class PreSessionSetupScreen extends StatefulWidget {
 }
 
 class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
-  String _selectedLanguage = 'Hindi (हिन्दी)';
+  // Auto-detect is the real default: the VR headset's live pipeline already
+  // detects the speaker's language on its own from actual speech (Sarvam
+  // STT, verified against all of these) - this picker mainly exists to
+  // force one specific language when you want to skip that detection.
+  // Sending 'unknown' (Sarvam's own auto-detect code) rather than a
+  // hardcoded label matches what the backend/Unity side actually expect,
+  // and covers all 22 of Sarvam's supported Indian languages plus English
+  // instead of the 5 that used to be hardcoded here.
+  String _selectedLanguage = 'unknown';
   final TextEditingController _topicController = TextEditingController(text: 'Job Interview');
   int _selectedAudienceSize = 1; // 0: Small, 1: Medium, 2: Large
 
-  final List<String> _languages = [
-    'Hindi (हिन्दी)',
-    'Tamil (தமிழ்)',
-    'Telugu (తెలుగు)',
-    'Bengali (বাংলা)',
-    'English',
-  ];
+  /// Sarvam language code -> display label. Matches
+  /// backend/app/services/sarvam_service.py's SARVAM_LANGUAGE_NAMES exactly,
+  /// so whatever is sent here is always a code the backend actually accepts.
+  static const Map<String, String> _languages = {
+    'unknown': 'Auto-detect',
+    'hi-IN': 'Hindi (हिन्दी)',
+    'ta-IN': 'Tamil (தமிழ்)',
+    'te-IN': 'Telugu (తెలుగు)',
+    'bn-IN': 'Bengali (বাংলা)',
+    'en-IN': 'English',
+    'gu-IN': 'Gujarati (ગુજરાતી)',
+    'kn-IN': 'Kannada (ಕನ್ನಡ)',
+    'ml-IN': 'Malayalam (മലയാളം)',
+    'mr-IN': 'Marathi (मराठी)',
+    'pa-IN': 'Punjabi (ਪੰਜਾਬੀ)',
+    'or-IN': 'Odia (ଓଡ଼ିଆ)',
+    'as-IN': 'Assamese (অসমীয়া)',
+    'ur-IN': 'Urdu (اردو)',
+    'ne-IN': 'Nepali (नेपाली)',
+    'sa-IN': 'Sanskrit (संस्कृतम्)',
+    'kok-IN': 'Konkani (कोंकणी)',
+    'mai-IN': 'Maithili (मैथिली)',
+    'brx-IN': 'Bodo (बड़ो)',
+    'doi-IN': 'Dogri (डोगरी)',
+    'ks-IN': 'Kashmiri (کٲشُر)',
+    'sat-IN': 'Santali (ᱥᱟᱱᱛᱟᱲᱤ)',
+    'sd-IN': 'Sindhi (سنڌي)',
+    'mni-IN': 'Manipuri (মৈতৈলোন্)',
+  };
 
   /// NPC counts shown next to each size option - also what's sent to the hub
   /// as audience_size, since it's more meaningful there than "Small/Medium/Large".
@@ -107,14 +137,14 @@ class _PreSessionSetupScreenState extends State<PreSessionSetupScreen> {
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
-                        children: _languages.map((lang) {
-                          final isSelected = _selectedLanguage == lang;
+                        children: _languages.entries.map((entry) {
+                          final isSelected = _selectedLanguage == entry.key;
                           return ChoiceChip(
-                            label: Text(lang),
+                            label: Text(entry.value),
                             selected: isSelected,
                             onSelected: (_) {
                               setState(() {
-                                _selectedLanguage = lang;
+                                _selectedLanguage = entry.key;
                               });
                             },
                             labelStyle: AnubhavTextStyles.labelMedium.copyWith(
