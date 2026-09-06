@@ -146,7 +146,7 @@ class WebSocketHub:
         if text_chunk:
             # Text-chunk path (manual/simulated testing) is already a
             # complete utterance - run it immediately, no windowing needed.
-            await self._run_pipeline(session_id, combined_audio=None, transcript_override=text_chunk)
+            await self._run_pipeline_guarded(session_id, combined_audio=None, transcript_override=text_chunk)
             return
 
         if audio_chunk:
@@ -172,9 +172,26 @@ class WebSocketHub:
         session.last_pipeline_run = now
         session.pipeline_running = True
         try:
-            await self._run_pipeline(session_id, combined_audio=combined_audio)
+            await self._run_pipeline_guarded(session_id, combined_audio=combined_audio)
         finally:
             session.pipeline_running = False
+
+    async def _run_pipeline_guarded(self, session_id: str, **kwargs):
+        """Wraps _run_pipeline so a transient failure in a real external call
+        (Sarvam/Hume timeout, rate limit, transient 5xx) is logged and
+        swallowed instead of propagating out of the WebSocket route handler -
+        an uncaught exception there aborts the ASGI connection outright,
+        which surfaces to the client as exactly the "closed without
+        completing the close handshake" error observed live, killing the
+        whole session over one bad API call instead of just skipping a
+        window's worth of feedback."""
+        try:
+            await self._run_pipeline(session_id, **kwargs)
+        except Exception:
+            logger.exception(
+                f"Pipeline run failed for session {session_id} - skipping this window "
+                "so the connection stays alive for the next one."
+            )
 
     async def _run_pipeline(
         self,

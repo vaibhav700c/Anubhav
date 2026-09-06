@@ -62,25 +62,35 @@ async def session_websocket_endpoint(
             message = await websocket.receive()
             if message.get("type") == "websocket.disconnect":
                 break
-            if "bytes" in message and message["bytes"]:
-                # Raw audio chunk from VR
-                await hub.process_incoming_vr_frame(session_id, audio_chunk=message["bytes"])
-            elif "text" in message and message["text"]:
-                try:
-                    payload = json.loads(message["text"])
-                    msg_type = payload.get("type", "")
-                    if msg_type == "audio_chunk":
-                        # Base64 audio chunk or transcript simulation
-                        import base64
-                        raw_bytes = base64.b64decode(payload.get("data", ""))
-                        await hub.process_incoming_vr_frame(session_id, audio_chunk=raw_bytes)
-                    elif msg_type == "text_chunk":
-                        await hub.process_incoming_vr_frame(session_id, text_chunk=payload.get("text", ""))
-                    elif msg_type == "ping":
-                        await websocket.send_json({"type": "pong"})
-                except json.JSONDecodeError:
-                    # Treat plain text as text chunk
-                    await hub.process_incoming_vr_frame(session_id, text_chunk=message["text"])
+            try:
+                if "bytes" in message and message["bytes"]:
+                    # Raw audio chunk from VR
+                    await hub.process_incoming_vr_frame(session_id, audio_chunk=message["bytes"])
+                elif "text" in message and message["text"]:
+                    try:
+                        payload = json.loads(message["text"])
+                        msg_type = payload.get("type", "")
+                        if msg_type == "audio_chunk":
+                            # Base64 audio chunk or transcript simulation
+                            import base64
+                            raw_bytes = base64.b64decode(payload.get("data", ""))
+                            await hub.process_incoming_vr_frame(session_id, audio_chunk=raw_bytes)
+                        elif msg_type == "text_chunk":
+                            await hub.process_incoming_vr_frame(session_id, text_chunk=payload.get("text", ""))
+                        elif msg_type == "ping":
+                            await websocket.send_json({"type": "pong"})
+                    except json.JSONDecodeError:
+                        # Treat plain text as text chunk
+                        await hub.process_incoming_vr_frame(session_id, text_chunk=message["text"])
+            except WebSocketDisconnect:
+                raise
+            except Exception:
+                # Anything else (a malformed frame, a stray decode error) must
+                # never abort the ASGI connection - an uncaught exception here
+                # kills the raw socket without a close handshake, which is
+                # exactly the failure observed live against the real backend.
+                # Log it and keep servicing this session's connection.
+                logger.exception(f"Error handling frame for session {session_id} - connection stays open.")
     except WebSocketDisconnect:
         logger.info(f"Client disconnected from session {session_id}")
     finally:
